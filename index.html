@@ -131,10 +131,18 @@
           padding: 0 !important;
         }
         #leftPanel {
-          display: none !important; /* Start hidden */
+          display: none !important;
           flex: 1 1 0%;
           padding-top: 1rem !important;
         }
+        /* Mobile View Toggling Logic */
+        body.mobile-list-view #centerPanel {
+            display: none !important;
+        }
+        body.mobile-list-view #leftPanel {
+            display: flex !important;
+        }
+
         /* Hide desktop elements */
         #leftResizer, #rightResizer, #rightPanel, #desktopControls, .desktop-only {
           display: none !important;
@@ -1070,10 +1078,10 @@
             const mainTitle = document.getElementById('mainTitle');
             const showTreeBtn = document.getElementById('showTreeBtn');
             const showListBtn = document.getElementById('showListBtn');
+            const bodyEl = document.body;
 
             showTreeBtn.addEventListener('click', () => {
-                centerPanel.style.display = 'flex';
-                leftPanel.style.display = 'none';
+                bodyEl.classList.remove('mobile-list-view');
                 mainTitle.textContent = "家谱关系图";
                 showTreeBtn.classList.add('text-secondary');
                 showTreeBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
@@ -1081,8 +1089,7 @@
                 showListBtn.classList.remove('text-secondary');
             });
             showListBtn.addEventListener('click', () => {
-                centerPanel.style.display = 'none';
-                leftPanel.style.display = 'flex';
+                bodyEl.classList.add('mobile-list-view');
                 mainTitle.textContent = "成员列表";
                 showListBtn.classList.add('text-secondary');
                 showListBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
@@ -1139,3 +1146,5 @@
     </script>
 </body>
 </html>
+}
+请你根据我提供的完整代码作为全部参照，然后查询此代码中，梁顺忠的老婆廖华芬死亡日期是2025年7月18日，我想你帮我用js写一个精确到秒的倒计时功能，将这个倒计时功能呈现在廖华芬的成员详情页面，请注意，不是替换掉原来的内容，而是在简介那里新增一行倒计时，用于倒计时，要求必须要有天，时，分，秒，毫秒，然后其他地方不要修改和删减，然后把修改后完整代码发给我。
