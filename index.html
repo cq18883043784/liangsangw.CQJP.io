@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>梁氏家族关系网 | 探索您的家族历史</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
@@ -109,13 +109,52 @@
             }
         }
     </style>
+    <style>
+      @media (max-width: 767px) {
+        html, body {
+          height: 100%;
+          overflow: hidden;
+        }
+        body {
+          display: flex;
+          flex-direction: column;
+        }
+        main {
+          flex: 1 1 0%;
+          display: flex;
+          overflow: hidden;
+        }
+        /* Panels */
+        #centerPanel {
+          display: flex !important;
+          flex: 1 1 0%;
+          padding: 0 !important;
+        }
+        #leftPanel {
+          display: none !important; /* Start hidden */
+          flex: 1 1 0%;
+          padding-top: 1rem !important;
+        }
+        /* Hide desktop elements */
+        #leftResizer, #rightResizer, #rightPanel, #desktopControls, .desktop-only {
+          display: none !important;
+        }
+        /* Show mobile elements */
+        #bottomNav, #mobileControls {
+            display: flex !important;
+        }
+        .mobile-only {
+            display: flex !important;
+        }
+      }
+    </style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans h-screen flex flex-col">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans">
     <header class="bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-700/50 sticky top-0 z-50">
         <div class="container mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <i class="fa fa-sitemap text-secondary text-2xl"></i>
-                <h1 class="text-xl md:text-2xl font-bold text-primary dark:text-gray-100">梁氏家族关系网</h1>
+                <h1 id="mainTitle" class="text-xl md:text-2xl font-bold text-primary dark:text-gray-100">梁氏家族关系网</h1>
             </div>
             <nav class="flex items-center space-x-2 md:space-x-4">
                 <button id="darkModeToggle" class="btn-outline !p-2 h-10 w-10 flex items-center justify-center" title="切换夜间模式">
@@ -140,15 +179,11 @@
 
     <main class="flex-1 flex flex-col md:flex-row md:px-4 md:py-6 gap-2 overflow-hidden">
         
-        <aside id="leftPanel" class="bg-white dark:bg-gray-800 w-full h-full p-5 flex-col
+        <aside id="leftPanel" class="bg-white dark:bg-gray-800 w-full h-full flex-col
                                      md:w-64 md:h-auto lg:w-72 md:rounded-xl md:shadow-sm md:sticky md:top-24 md:flex
-                                     hidden">
-            <div class="flex items-center justify-between pb-4 border-b dark:border-gray-700 md:hidden">
-                <h2 class="text-xl font-bold">成员列表</h2>
-                <button id="closeListBtn" class="p-2 text-2xl leading-none">&times;</button>
-            </div>
-            <div class="flex-1 flex flex-col min-h-0 pt-4 md:pt-0">
-                <div class="mb-6 shrink-0 hidden md:block">
+                                     hidden p-4">
+            <div class="flex-1 flex flex-col min-h-0">
+                <div class="mb-6 shrink-0 hidden md:block desktop-only">
                     <h2 class="text-lg font-bold text-primary dark:text-gray-100 mb-3 flex items-center"><i class="fa fa-home text-secondary mr-2"></i>家族信息</h2>
                     <div class="bg-neutral dark:bg-gray-700/50 rounded-lg p-4">
                         <div class="flex items-center space-x-3 mb-3">
@@ -170,7 +205,13 @@
                         </div>
                     </div>
                 </div>
-                <h2 class="text-lg font-bold text-primary dark:text-gray-100 mb-3 flex items-center shrink-0 hidden md:flex"><i class="fa fa-users text-secondary mr-2"></i>家谱人员</h2>
+                <h2 class="text-lg font-bold text-primary dark:text-gray-100 mb-3 flex items-center shrink-0 hidden md:flex desktop-only"><i class="fa fa-users text-secondary mr-2"></i>家谱人员</h2>
+                <div class="relative mb-4 mobile-only hidden">
+                    <input type="text" id="mobileSearchInput" placeholder="搜索成员姓名..." class="w-full pl-4 pr-10 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-base focus:outline-none focus:ring-2 focus:ring-secondary transition-all">
+                    <button id="mobileSearchButton" class="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-secondary">
+                        <i class="fa fa-search"></i>
+                    </button>
+                </div>
                 <div id="memberList" class="flex-1 overflow-y-auto pr-2"></div>
             </div>
         </aside>
@@ -179,8 +220,8 @@
             <div class="w-1 h-16 bg-gray-200 dark:bg-gray-600 rounded-full group-hover:bg-secondary transition-colors duration-200"></div>
         </div>
         
-        <section id="centerPanel" class="flex-1 flex flex-col bg-white dark:bg-gray-800 md:rounded-xl md:shadow-sm md:p-5">
-            <div class="flex-wrap items-center justify-between mb-6 gap-3 hidden md:flex">
+        <section id="centerPanel" class="flex-1 flex-col bg-white dark:bg-gray-800 md:rounded-xl md:shadow-sm md:p-5 hidden md:flex">
+            <div id="desktopControls" class="flex-wrap items-center justify-between mb-6 gap-3 hidden md:flex">
                 <div>
                     <h2 class="text-xl font-bold text-primary dark:text-gray-100">家谱关系图</h2>
                     <p class="text-sm text-gray-500 dark:text-gray-400">可拖拽平移、滚轮缩放视图</p>
@@ -209,7 +250,7 @@
                         </g>
                     </svg>
                 </div>
-                <div id="mobileControls" class="absolute bottom-6 right-5 z-20 flex flex-col gap-3 md:hidden">
+                <div id="mobileControls" class="absolute bottom-6 right-5 z-20 flex-col gap-3 hidden">
                     <button class="btn-primary w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-lg" title="定位始祖" id="mobileLocateRootBtn"><i class="fa fa-map-marker"></i></button>
                     <button class="btn-outline bg-white dark:bg-gray-700 w-12 h-12 rounded-full flex items-center justify-center text-lg shadow-lg" title="放大" id="mobileZoomInBtn"><i class="fa fa-search-plus"></i></button>
                     <button class="btn-outline bg-white dark:bg-gray-700 w-12 h-12 rounded-full flex items-center justify-center text-lg shadow-lg" title="缩小" id="mobileZoomOutBtn"><i class="fa fa-search-minus"></i></button>
@@ -235,7 +276,7 @@
         </aside>
     </main>
     
-    <nav id="bottomNav" class="bg-white dark:bg-gray-800 border-t dark:border-gray-700 shadow-t-lg flex justify-around items-center p-2 md:hidden">
+    <nav id="bottomNav" class="bg-white dark:bg-gray-800 border-t dark:border-gray-700 shadow-t-lg justify-around items-center p-2 hidden md:hidden">
         <button id="showTreeBtn" class="flex flex-col items-center gap-1 text-secondary w-24">
             <i class="fa fa-sitemap text-2xl"></i>
             <span class="text-xs font-medium">家谱图</span>
@@ -854,7 +895,6 @@
                     document.querySelectorAll('.member-list-name').forEach(el => el.classList.remove('bg-secondary', 'text-white', 'font-semibold'));
                     nameEl.classList.add('bg-secondary', 'text-white', 'font-semibold');
                     focusOnPerson(id, id);
-                    // On mobile, switch back to tree view after selecting a person
                     if (isTouchDevice) {
                         document.getElementById('showTreeBtn').click();
                     }
@@ -864,30 +904,28 @@
 
         const searchInput = document.getElementById('searchInput');
         const searchButton = document.getElementById('searchButton');
-        function performSearch() {
-            const searchTerm = searchInput.value.trim();
-            if (!searchTerm) {
-                searchInput.focus();
-                return;
-            }
-            const personFound = familyData.find(p => p.name === searchTerm);
+        const mobileSearchInput = document.getElementById('mobileSearchInput');
+        const mobileSearchButton = document.getElementById('mobileSearchButton');
+
+        function performSearch(term) {
+            if (!term) return;
+            const personFound = familyData.find(p => p.name === term);
             if (personFound) {
                 focusOnPerson(personFound.id);
                 searchInput.value = '';
-                 // On mobile, switch back to tree view after a successful search
+                mobileSearchInput.value = '';
                 if (isTouchDevice) {
                     document.getElementById('showTreeBtn').click();
                 }
             } else {
-                alert(`未找到名为 "${searchTerm}" 的成员。\n请确保输入了完整且正确的姓名。`);
-                searchInput.classList.add('ring-2', 'ring-red-500');
-                setTimeout(() => {
-                    searchInput.classList.remove('ring-2', 'ring-red-500');
-                }, 2000);
+                alert(`未找到名为 "${term}" 的成员。\n请确保输入了完整且正确的姓名。`);
             }
         }
-        searchButton.addEventListener('click', performSearch);
-        searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearch(); });
+
+        searchButton.addEventListener('click', () => performSearch(searchInput.value.trim()));
+        searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearch(searchInput.value.trim()); });
+        mobileSearchButton.addEventListener('click', () => performSearch(mobileSearchInput.value.trim()));
+        mobileSearchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearch(mobileSearchInput.value.trim()); });
 
         if (!isTouchDevice) {
             container.addEventListener('mousedown', e => {
@@ -975,7 +1013,6 @@
             });
         }
         
-        // --- Desktop Controls ---
         document.getElementById('zoomInBtn').addEventListener('click', () => { 
             const newScale = Math.min(view.scale * 1.25, 2);
             smoothTransitionTo(view.tx, view.ty, newScale);
@@ -988,7 +1025,6 @@
         document.getElementById('locateRootBtn').addEventListener('click', () => focusOnPerson(1));
         returnToFullMapBtn.addEventListener('click', returnToFullMap);
         
-        // --- Mobile FAB Controls ---
         document.getElementById('mobileZoomInBtn').addEventListener('click', () => { 
             document.getElementById('zoomInBtn').click();
         });
@@ -1003,8 +1039,6 @@
             }
         });
 
-
-        // --- Modals and Theming ---
         document.getElementById('closeModal').addEventListener('click', function() {
             const modal = document.getElementById('mobileMemberModal');
             const modalContent = document.getElementById('mobileModalContent');
@@ -1032,29 +1066,29 @@
         });
 
         // --- Mobile View Toggling ---
-        if (isTouchDevice) {
+        if (document.getElementById('bottomNav')) {
+            const mainTitle = document.getElementById('mainTitle');
             const showTreeBtn = document.getElementById('showTreeBtn');
             const showListBtn = document.getElementById('showListBtn');
-            const closeListBtn = document.getElementById('closeListBtn');
 
             showTreeBtn.addEventListener('click', () => {
-                centerPanel.classList.remove('hidden');
-                leftPanel.classList.add('hidden');
+                centerPanel.style.display = 'flex';
+                leftPanel.style.display = 'none';
+                mainTitle.textContent = "家谱关系图";
                 showTreeBtn.classList.add('text-secondary');
                 showTreeBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
                 showListBtn.classList.add('text-gray-500', 'dark:text-gray-400');
                 showListBtn.classList.remove('text-secondary');
             });
             showListBtn.addEventListener('click', () => {
-                centerPanel.classList.add('hidden');
-                leftPanel.classList.remove('hidden');
-                leftPanel.classList.add('flex'); // Make sure it's visible
+                centerPanel.style.display = 'none';
+                leftPanel.style.display = 'flex';
+                mainTitle.textContent = "成员列表";
                 showListBtn.classList.add('text-secondary');
                 showListBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
                 showTreeBtn.classList.add('text-gray-500', 'dark:text-gray-400');
                 showTreeBtn.classList.remove('text-secondary');
             });
-            closeListBtn.addEventListener('click', () => showTreeBtn.click());
         }
 
 
@@ -1066,18 +1100,16 @@
             const root = activeData.find(p => !p.father);
             if(root) {
                 const pos = positions.get(root.id);
-                // Adjust initial scale for mobile
-                const initialScale = isTouchDevice ? 0.4 : 0.7;
+                const initialScale = isTouchDevice ? 0.45 : 0.7;
                 if(pos) {
                     view.tx = (container.clientWidth / 2) - ((pos.x + NODE_WIDTH / 2) * initialScale);
-                    view.ty = (container.clientHeight * (isTouchDevice ? 0.2 : 0.5)) - ((pos.y + NODE_HEIGHT / 2) * initialScale);
+                    view.ty = 80; // Use a fixed top offset for mobile robustness
                     view.scale = initialScale;
                     updateTransform();
                 }
             }
         }, 100);
         
-        // --- Desktop Resizer Logic ---
         const leftResizer = document.getElementById('leftResizer');
         const rightResizer = document.getElementById('rightResizer');
         const MIN_PANEL_WIDTH = 200;
