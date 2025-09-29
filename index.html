@@ -27,14 +27,6 @@
     </script>
     
     <style type="text/tailwindcss">
-        @layer base {
-            /* NEW: Add padding to body on mobile to avoid overlap with new nav bar */
-            @media (max-width: 767px) {
-                body {
-                    padding-bottom: 70px;
-                }
-            }
-        }
         @layer utilities {
             .content-auto {
                 content-visibility: auto;
@@ -118,15 +110,18 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans min-h-screen flex flex-col">
-    <header class="bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-700/50 sticky top-0 z-40">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans h-screen flex flex-col">
+    <header class="bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-700/50 sticky top-0 z-50">
         <div class="container mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <i class="fa fa-sitemap text-secondary text-2xl"></i>
                 <h1 class="text-xl md:text-2xl font-bold text-primary dark:text-gray-100">梁氏家族关系网</h1>
             </div>
             <nav class="flex items-center space-x-2 md:space-x-4">
-                 <div class="relative group">
+                <button id="darkModeToggle" class="btn-outline !p-2 h-10 w-10 flex items-center justify-center" title="切换夜间模式">
+                    <i id="theme-icon" class="fa fa-moon-o"></i>
+               </button>
+                 <div class="relative group hidden md:flex">
                     <button class="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                         <img src="https://ui-avatars.com/api/?name=梁&background=8B5CF6&color=fff&size=40" alt="用户头像" class="w-8 h-8 rounded-full object-cover border-2 border-secondary">
                         <span class="hidden md:inline font-medium dark:text-gray-200">梁氏家族</span>
@@ -143,10 +138,17 @@
         </div>
     </header>
 
-    <main class="flex-1 px-4 py-6 md:flex gap-2">
-        <aside id="leftPanel" class="w-full md:w-64 lg:w-72 shrink-0 md:sticky md:top-24" style="min-width: 200px; height: fit-content;">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 h-full flex flex-col">
-                <div class="mb-6 shrink-0">
+    <main class="flex-1 flex flex-col md:flex-row md:px-4 md:py-6 gap-2 overflow-hidden">
+        
+        <aside id="leftPanel" class="bg-white dark:bg-gray-800 w-full h-full p-5 flex-col
+                                     md:w-64 md:h-auto lg:w-72 md:rounded-xl md:shadow-sm md:sticky md:top-24 md:flex
+                                     hidden">
+            <div class="flex items-center justify-between pb-4 border-b dark:border-gray-700 md:hidden">
+                <h2 class="text-xl font-bold">成员列表</h2>
+                <button id="closeListBtn" class="p-2 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="flex-1 flex flex-col min-h-0 pt-4 md:pt-0">
+                <div class="mb-6 shrink-0 hidden md:block">
                     <h2 class="text-lg font-bold text-primary dark:text-gray-100 mb-3 flex items-center"><i class="fa fa-home text-secondary mr-2"></i>家族信息</h2>
                     <div class="bg-neutral dark:bg-gray-700/50 rounded-lg p-4">
                         <div class="flex items-center space-x-3 mb-3">
@@ -168,11 +170,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex-1 flex flex-col min-h-0">
-                     <h2 class="text-lg font-bold text-primary dark:text-gray-100 mb-3 flex items-center shrink-0"><i class="fa fa-users text-secondary mr-2"></i>家谱人员</h2>
-                     <div id="memberList" class="flex-1 overflow-y-auto pr-2" style="max-height: 50vh;">
-                        </div>
-                </div>
+                <h2 class="text-lg font-bold text-primary dark:text-gray-100 mb-3 flex items-center shrink-0 hidden md:flex"><i class="fa fa-users text-secondary mr-2"></i>家谱人员</h2>
+                <div id="memberList" class="flex-1 overflow-y-auto pr-2"></div>
             </div>
         </aside>
 
@@ -180,13 +179,12 @@
             <div class="w-1 h-16 bg-gray-200 dark:bg-gray-600 rounded-full group-hover:bg-secondary transition-colors duration-200"></div>
         </div>
         
-        <section id="centerPanel" class="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 mt-4 md:mt-0" style="min-width: 300px;">
-            <div class="flex flex-wrap items-center justify-between mb-6 gap-3">
+        <section id="centerPanel" class="flex-1 flex flex-col bg-white dark:bg-gray-800 md:rounded-xl md:shadow-sm md:p-5">
+            <div class="flex-wrap items-center justify-between mb-6 gap-3 hidden md:flex">
                 <div>
                     <h2 class="text-xl font-bold text-primary dark:text-gray-100">家谱关系图</h2>
                     <p class="text-sm text-gray-500 dark:text-gray-400">可拖拽平移、滚轮缩放视图</p>
                 </div>
-
                 <div class="relative">
                     <input type="text" id="searchInput" placeholder="输入完整姓名搜索..." class="w-48 sm:w-64 pl-4 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-secondary transition-all">
                     <button id="searchButton" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-secondary" title="搜索">
@@ -194,9 +192,6 @@
                     </button>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button id="darkModeToggle" class="btn-outline !p-2 h-10 w-10 flex items-center justify-center" title="切换夜间模式">
-                         <i id="theme-icon" class="fa fa-moon-o"></i>
-                    </button>
                     <button class="btn-primary flex items-center gap-1 hidden" title="返回全图" id="returnToFullMapBtn"><i class="fa fa-sitemap"></i><span class="hidden sm:inline">返回全图</span></button>
                     <button class="btn-primary flex items-center gap-1" title="定位始祖" id="locateRootBtn"><i class="fa fa-map-marker"></i><span class="hidden sm:inline">定位始祖</span></button>
                     <button class="btn-outline flex items-center gap-1" title="放大" id="zoomInBtn"><i class="fa fa-search-plus"></i></button>
@@ -205,8 +200,8 @@
                 </div>
             </div>
             
-            <div class="relative bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-[70vh] md:h-[85vh]">
-                <div class="absolute inset-0 overflow-auto cursor-grab" id="familyTreeContainer">
+            <div class="relative flex-1 bg-gray-50 dark:bg-gray-900 md:rounded-lg border-t md:border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="absolute inset-0 cursor-grab" id="familyTreeContainer">
                     <svg id="familyTree" width="10000" height="6000">
                         <g id="viewport">
                             <g id="connections"></g>
@@ -214,15 +209,20 @@
                         </g>
                     </svg>
                 </div>
+                <div id="mobileControls" class="absolute bottom-6 right-5 z-20 flex flex-col gap-3 md:hidden">
+                    <button class="btn-primary w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-lg" title="定位始祖" id="mobileLocateRootBtn"><i class="fa fa-map-marker"></i></button>
+                    <button class="btn-outline bg-white dark:bg-gray-700 w-12 h-12 rounded-full flex items-center justify-center text-lg shadow-lg" title="放大" id="mobileZoomInBtn"><i class="fa fa-search-plus"></i></button>
+                    <button class="btn-outline bg-white dark:bg-gray-700 w-12 h-12 rounded-full flex items-center justify-center text-lg shadow-lg" title="缩小" id="mobileZoomOutBtn"><i class="fa fa-search-minus"></i></button>
+                </div>
             </div>
         </section>
         
-        <div id="rightResizer" class="hidden lg:flex items-center justify-center w-2 cursor-col-resize group">
+        <div id="rightResizer" class="hidden md:flex items-center justify-center w-2 cursor-col-resize group">
              <div class="w-1 h-16 bg-gray-200 dark:bg-gray-600 rounded-full group-hover:bg-secondary transition-colors duration-200"></div>
         </div>
 
-        <aside id="rightPanel" class="w-full md:w-80 shrink-0 hidden lg:block" style="min-width: 200px;">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 sticky top-24 h-[calc(85vh+50px)]">
+        <aside id="rightPanel" class="w-full md:w-80 shrink-0 hidden lg:block">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 sticky top-24 h-[calc(100vh-8rem)]">
                 <h2 class="text-lg font-bold text-primary dark:text-gray-100 mb-4 flex items-center"><i class="fa fa-user text-secondary mr-2"></i>成员详情</h2>
                 <div id="detailsWrapper" class="h-[calc(100%-40px)] overflow-y-auto">
                     <div id="noMemberSelected" class="text-center py-10 text-gray-500 dark:text-gray-400">
@@ -235,6 +235,17 @@
         </aside>
     </main>
     
+    <nav id="bottomNav" class="bg-white dark:bg-gray-800 border-t dark:border-gray-700 shadow-t-lg flex justify-around items-center p-2 md:hidden">
+        <button id="showTreeBtn" class="flex flex-col items-center gap-1 text-secondary w-24">
+            <i class="fa fa-sitemap text-2xl"></i>
+            <span class="text-xs font-medium">家谱图</span>
+        </button>
+        <button id="showListBtn" class="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400 w-24">
+            <i class="fa fa-users text-2xl"></i>
+            <span class="text-xs font-medium">成员列表</span>
+        </button>
+    </nav>
+
     <div id="mobileMemberModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-end">
         <div id="mobileModalContent" class="bg-white dark:bg-gray-800 w-full h-[85vh] rounded-t-2xl overflow-y-auto transform transition-transform duration-300 translate-y-full">
             <div class="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
@@ -243,17 +254,6 @@
             </div>
             <div class="p-5" id="mobileMemberDetails"></div>
         </div>
-    </div>
-
-    <div id="mobileNav" class="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-[0_-2px_5px_rgba(0,0,0,0.1)] dark:shadow-[0_-2px_5px_rgba(0,0,0,0.3)] p-2 flex justify-around z-50">
-        <button id="showListBtn" class="flex flex-col items-center justify-center text-secondary w-full transition-colors duration-200">
-            <i class="fa fa-users text-xl"></i>
-            <span class="text-xs mt-1">成员列表</span>
-        </button>
-        <button id="showTreeBtn" class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 w-full transition-colors duration-200">
-            <i class="fa fa-sitemap text-xl"></i>
-            <span class="text-xs mt-1">家谱图</span>
-        </button>
     </div>
     
     <script>
@@ -325,6 +325,7 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         
+        // --- DOM Elements ---
         const svg = document.getElementById('familyTree');
         const viewport = document.getElementById('viewport');
         const membersGroup = document.getElementById('members');
@@ -334,31 +335,32 @@
         const mobileMemberDetailsPanel = document.getElementById('mobileMemberDetails');
         const noMemberSelectedPanel = document.getElementById('noMemberSelected');
         const returnToFullMapBtn = document.getElementById('returnToFullMapBtn');
+        const leftPanel = document.getElementById('leftPanel');
+        const centerPanel = document.getElementById('centerPanel');
 
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
+        // --- Constants ---
         const NODE_WIDTH = 160;
         const NODE_HEIGHT = 130;
         const SPOUSE_GAP = 40;
         const SIBLING_GAP = 50;
         const GENERATION_GAP = 180;
 
+        // --- Data & State ---
         const dataMap = new Map(familyData.map(p => [p.id, { ...p, spouses: p.spouses || [] }]));
         document.getElementById('totalMembers').textContent = `${familyData.length} 人`;
-
         const renderedFamilyData = familyData.filter(p => p.name.startsWith('梁'));
         
         let positions = new Map();
         const view = { scale: 0.7, tx: 0, ty: 0, isDragging: false };
-
         let activeLayoutShift = null;
         let animationFrameId = null;
-
         let currentFocusRootId = null;
         let activeData = [];
         let activeSpouseUnit = null; 
 
-
+        // --- Core Functions ---
         function calculateLayout() {
             positions = new Map();
             const generationLevels = new Map();
@@ -852,8 +854,7 @@
                     document.querySelectorAll('.member-list-name').forEach(el => el.classList.remove('bg-secondary', 'text-white', 'font-semibold'));
                     nameEl.classList.add('bg-secondary', 'text-white', 'font-semibold');
                     focusOnPerson(id, id);
-
-                    // NEW: Auto-switch to tree view on mobile when a name is clicked
+                    // On mobile, switch back to tree view after selecting a person
                     if (isTouchDevice) {
                         document.getElementById('showTreeBtn').click();
                     }
@@ -873,6 +874,7 @@
             if (personFound) {
                 focusOnPerson(personFound.id);
                 searchInput.value = '';
+                 // On mobile, switch back to tree view after a successful search
                 if (isTouchDevice) {
                     document.getElementById('showTreeBtn').click();
                 }
@@ -973,6 +975,7 @@
             });
         }
         
+        // --- Desktop Controls ---
         document.getElementById('zoomInBtn').addEventListener('click', () => { 
             const newScale = Math.min(view.scale * 1.25, 2);
             smoothTransitionTo(view.tx, view.ty, newScale);
@@ -985,6 +988,23 @@
         document.getElementById('locateRootBtn').addEventListener('click', () => focusOnPerson(1));
         returnToFullMapBtn.addEventListener('click', returnToFullMap);
         
+        // --- Mobile FAB Controls ---
+        document.getElementById('mobileZoomInBtn').addEventListener('click', () => { 
+            document.getElementById('zoomInBtn').click();
+        });
+        document.getElementById('mobileZoomOutBtn').addEventListener('click', () => {
+            document.getElementById('zoomOutBtn').click();
+        });
+        document.getElementById('mobileLocateRootBtn').addEventListener('click', () => {
+            if(returnToFullMapBtn.classList.contains('hidden')) {
+                document.getElementById('locateRootBtn').click();
+            } else {
+                returnToFullMapBtn.click();
+            }
+        });
+
+
+        // --- Modals and Theming ---
         document.getElementById('closeModal').addEventListener('click', function() {
             const modal = document.getElementById('mobileMemberModal');
             const modalContent = document.getElementById('mobileModalContent');
@@ -1011,57 +1031,30 @@
             }
         });
 
-        function recenterTree() {
-            setTimeout(() => {
-                const rootId = (currentFocusRootId === null) ? activeData.find(p => !p.father)?.id : currentFocusRootId;
-                if(rootId) {
-                    const pos = positions.get(rootId);
-                    const scale = isTouchDevice ? 0.6 : 0.7;
-                    if(pos) {
-                        view.tx = (container.clientWidth / 2) - ((pos.x + NODE_WIDTH / 2) * scale);
-                        view.ty = (container.clientHeight * 0.2) - ((pos.y + NODE_HEIGHT / 2) * scale); // Center vertically a bit higher
-                        view.scale = scale;
-                        updateTransform();
-                    }
-                }
-            }, 50);
-        }
-
-        // --- NEW: Mobile View Switching Logic ---
-        function setupMobileView() {
-            const leftPanel = document.getElementById('leftPanel');
-            const centerPanel = document.getElementById('centerPanel');
-            const showListBtn = document.getElementById('showListBtn');
+        // --- Mobile View Toggling ---
+        if (isTouchDevice) {
             const showTreeBtn = document.getElementById('showTreeBtn');
-            const activeClasses = ['text-secondary', 'dark:text-secondary'];
-            const inactiveClasses = ['text-gray-500', 'dark:text-gray-400'];
+            const showListBtn = document.getElementById('showListBtn');
+            const closeListBtn = document.getElementById('closeListBtn');
 
-            // Set initial mobile view
-            centerPanel.classList.add('hidden');
-            leftPanel.classList.remove('hidden');
-            showListBtn.classList.add(...activeClasses);
-            showListBtn.classList.remove(...inactiveClasses);
-            showTreeBtn.classList.add(...inactiveClasses);
-            showTreeBtn.classList.remove(...activeClasses);
-
+            showTreeBtn.addEventListener('click', () => {
+                centerPanel.classList.remove('hidden');
+                leftPanel.classList.add('hidden');
+                showTreeBtn.classList.add('text-secondary');
+                showTreeBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
+                showListBtn.classList.add('text-gray-500', 'dark:text-gray-400');
+                showListBtn.classList.remove('text-secondary');
+            });
             showListBtn.addEventListener('click', () => {
                 centerPanel.classList.add('hidden');
                 leftPanel.classList.remove('hidden');
-                showListBtn.classList.add(...activeClasses);
-                showListBtn.classList.remove(...inactiveClasses);
-                showTreeBtn.classList.add(...inactiveClasses);
-                showTreeBtn.classList.remove(...activeClasses);
+                leftPanel.classList.add('flex'); // Make sure it's visible
+                showListBtn.classList.add('text-secondary');
+                showListBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
+                showTreeBtn.classList.add('text-gray-500', 'dark:text-gray-400');
+                showTreeBtn.classList.remove('text-secondary');
             });
-
-            showTreeBtn.addEventListener('click', () => {
-                leftPanel.classList.add('hidden');
-                centerPanel.classList.remove('hidden');
-                showTreeBtn.classList.add(...activeClasses);
-                showTreeBtn.classList.remove(...inactiveClasses);
-                showListBtn.classList.add(...inactiveClasses);
-                showListBtn.classList.remove(...activeClasses);
-                recenterTree();
-            });
+            closeListBtn.addEventListener('click', () => showTreeBtn.click());
         }
 
 
@@ -1069,15 +1062,22 @@
         activeData = renderedFamilyData;
         renderTree();
         buildAndAttachMemberList();
-
-        if (isTouchDevice && window.innerWidth < 768) {
-            setupMobileView();
-        } else {
-            recenterTree(); // Initial center for desktop
-        }
+        setTimeout(() => {
+            const root = activeData.find(p => !p.father);
+            if(root) {
+                const pos = positions.get(root.id);
+                // Adjust initial scale for mobile
+                const initialScale = isTouchDevice ? 0.4 : 0.7;
+                if(pos) {
+                    view.tx = (container.clientWidth / 2) - ((pos.x + NODE_WIDTH / 2) * initialScale);
+                    view.ty = (container.clientHeight * (isTouchDevice ? 0.2 : 0.5)) - ((pos.y + NODE_HEIGHT / 2) * initialScale);
+                    view.scale = initialScale;
+                    updateTransform();
+                }
+            }
+        }, 100);
         
-        const leftPanel = document.getElementById('leftPanel');
-        const rightPanel = document.getElementById('rightPanel');
+        // --- Desktop Resizer Logic ---
         const leftResizer = document.getElementById('leftResizer');
         const rightResizer = document.getElementById('rightResizer');
         const MIN_PANEL_WIDTH = 200;
@@ -1102,9 +1102,8 @@
             };
         }
         if (leftResizer) { leftResizer.addEventListener('mousedown', createResizerHandler(leftPanel, 'left')); }
-        if (rightResizer) { rightResizer.addEventListener('mousedown', createResizerHandler(rightPanel, 'right')); }
+        if (rightResizer) { rightResizer.addEventListener('mousedown', createResizerHandler(document.getElementById('rightPanel'), 'right')); }
     });
     </script>
 </body>
 </html>
-}
