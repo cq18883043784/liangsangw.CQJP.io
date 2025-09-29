@@ -23,7 +23,1161 @@
                     },
                 }
             }
+        }<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>梁氏家族关系网 | 探索您的家族历史</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4B5563', 
+                        secondary: '#8B5CF6',
+                        accent: '#EC4899', 
+                        neutral: '#F3F4F6', 
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
         }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .tree-line {
+                stroke: #9CA3AF;
+                stroke-width: 1.5;
+                fill: none;
+                transition: d 0.5s ease-in-out;
+            }
+            .member-card {
+                @apply relative bg-white rounded-lg shadow-md transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-secondary/20 dark:hover:shadow-secondary/30 hover:-translate-y-1;
+            }
+            .btn-primary {
+                @apply bg-secondary hover:bg-secondary/90 text-white font-medium py-2 px-4 rounded-md transition-all duration-200;
+            }
+            .btn-outline {
+                @apply border border-gray-400 dark:border-gray-500 hover:bg-gray-400/10 dark:hover:bg-gray-500/20 text-primary dark:text-gray-300 font-medium py-2 px-4 rounded-md transition-all duration-200;
+            }
+            .fade-in {
+                animation: fadeIn 0.5s ease-in-out;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            #familyTreeContainer {
+                touch-action: none;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+        }
+        body.resizing, body.resizing * {
+            cursor: col-resize !important;
+            user-select: none;
+        }
+
+        .member-unit {
+            transition: transform 0.5s ease-in-out;
+        }
+
+        .spouse-container, .spouse-line {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out;
+        }
+
+        .spouse-animator {
+            transform: scaleX(0);
+            transform-origin: left center;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .member-unit.spouses-visible .spouse-container,
+        .member-unit.spouses-visible .spouse-line {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .member-unit.spouses-visible .spouse-animator {
+            transform: scaleX(1);
+        }
+
+        .dark .tree-line {
+            stroke: #6B7280;
+        }
+
+        .viewfinder-path {
+            stroke: #8B5CF6;
+            stroke-width: 2.5;
+            fill: none;
+            stroke-linecap: round;
+        }
+
+        @keyframes draw-viewfinder-anim {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+    </style>
+    <style>
+      @media (max-width: 767px) {
+        html, body {
+          height: 100vh; /* Changed from 100% for better compatibility */
+          overflow: hidden;
+        }
+        body {
+          display: flex;
+          flex-direction: column;
+        }
+        main {
+          flex: 1 1 0%;
+          display: flex;
+          overflow: hidden;
+          position: relative; /* Add relative for z-index context */
+        }
+        /* Panels */
+        #centerPanel {
+          display: flex !important;
+          flex: 1 1 0%;
+          padding: 0 !important;
+        }
+        #leftPanel {
+          display: none !important; /* Start hidden */
+          position: absolute; /* Changed to absolute to be contained by main */
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          z-index: 100; /* Ensure it's on top */
+        }
+        /* Mobile View Toggling Logic */
+        body.mobile-list-view #leftPanel {
+            display: flex !important;
+        }
+
+        /* Hide desktop elements */
+        #leftResizer, #rightResizer, #rightPanel, #desktopControls, .desktop-only {
+          display: none !important;
+        }
+        /* Show mobile elements */
+        #bottomNav, #mobileControls {
+            display: flex !important;
+        }
+        .mobile-only {
+            display: flex !important;
+        }
+      }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans">
+    <header class="bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-700/50 sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <i class="fa fa-sitemap text-secondary text-2xl"></i>
+                <h1 id="mainTitle" class="text-xl md:text-2xl font-bold text-primary dark:text-gray-100">梁氏家族关系网</h1>
+            </div>
+            <nav class="flex items-center space-x-2 md:space-x-4">
+                <button id="darkModeToggle" class="btn-outline !p-2 h-10 w-10 flex items-center justify-center" title="切换夜间模式">
+                    <i id="theme-icon" class="fa fa-moon-o"></i>
+               </button>
+                 <div class="relative group hidden md:flex">
+                    <button class="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <img src="https://ui-avatars.com/api/?name=梁&background=8B5CF6&color=fff&size=40" alt="用户头像" class="w-8 h-8 rounded-full object-cover border-2 border-secondary">
+                        <span class="hidden md:inline font-medium dark:text-gray-200">梁氏家族</span>
+                        <i class="fa fa-chevron-down text-xs text-gray-500"></i>
+                    </button>
+                    <div class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg py-2 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 translate-y-2">
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"><i class="fa fa-user-circle mr-2"></i>个人资料</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"><i class="fa fa-book mr-2"></i>我的家谱</a>
+                        <div class="border-t border-gray-100 dark:border-gray-600 my-1"></div>
+                        <a href="#" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-600"><i class="fa fa-sign-out mr-2"></i>退出登录</a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col md:flex-row md:px-4 md:py-6 gap-2 overflow-hidden">
+        
+        <aside id="leftPanel" class="bg-white dark:bg-gray-800 w-full h-full flex-col
+                                     md:w-64 md:h-auto lg:w-72 md:rounded-xl md:shadow-sm md:sticky md:top-24 md:flex
+                                     hidden">
+            <div class="mobile-only hidden items-center justify-between p-4 border-b dark:border-gray-700 shrink-0">
+                <h1 class="text-xl font-bold">成员列表</h1>
+                <button id="closeListBtn" class="p-2 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="flex-1 flex flex-col min-h-0 p-4">
+                <div class="mb-6 shrink-0 hidden md:block desktop-only">
+                    <h2 class="text-lg font-bold text-primary dark:text-gray-100 mb-3 flex items-center"><i class="fa fa-home text-secondary mr-2"></i>家族信息</h2>
+                    <div class="bg-neutral dark:bg-gray-700/50 rounded-lg p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <img src="https://ui-avatars.com/api/?name=梁&background=8B5CF6&color=fff&size=60" alt="家族徽章" class="w-12 h-12 rounded-full object-cover border-2 border-secondary">
+                            <div>
+                                <h3 class="font-semibold dark:text-gray-100">梁氏家族</h3>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">始于约1457年</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-center text-sm">
+                            <div class="bg-white dark:bg-gray-600 rounded p-2">
+                                <p class="text-gray-500 dark:text-gray-400">已录入</p>
+                                <p class="font-bold text-secondary" id="totalMembers">0 人</p>
+                            </div>
+                            <div class="bg-white dark:bg-gray-600 rounded p-2">
+                                <p class="text-gray-500 dark:text-gray-400">世代</p>
+                                <p class="font-bold text-secondary">18</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <h2 class="text-lg font-bold text-primary dark:text-gray-100 mb-3 flex items-center shrink-0 hidden md:flex desktop-only"><i class="fa fa-users text-secondary mr-2"></i>家谱人员</h2>
+                <div class="relative mb-4 mobile-only hidden">
+                    <input type="text" id="mobileSearchInput" placeholder="搜索成员姓名..." class="w-full pl-4 pr-10 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-base focus:outline-none focus:ring-2 focus:ring-secondary transition-all">
+                    <button id="mobileSearchButton" class="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-secondary">
+                        <i class="fa fa-search"></i>
+                    </button>
+                </div>
+                <div id="memberList" class="flex-1 overflow-y-auto pr-2"></div>
+            </div>
+        </aside>
+
+        <div id="leftResizer" class="hidden md:flex items-center justify-center w-2 cursor-col-resize group">
+            <div class="w-1 h-16 bg-gray-200 dark:bg-gray-600 rounded-full group-hover:bg-secondary transition-colors duration-200"></div>
+        </div>
+        
+        <section id="centerPanel" class="flex-1 flex-col bg-white dark:bg-gray-800 md:rounded-xl md:shadow-sm md:p-5 hidden md:flex">
+            <div id="desktopControls" class="flex-wrap items-center justify-between mb-6 gap-3 hidden md:flex">
+                <div>
+                    <h2 class="text-xl font-bold text-primary dark:text-gray-100">家谱关系图</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">可拖拽平移、滚轮缩放视图</p>
+                </div>
+                <div class="relative">
+                    <input type="text" id="searchInput" placeholder="输入完整姓名搜索..." class="w-48 sm:w-64 pl-4 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-secondary transition-all">
+                    <button id="searchButton" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-secondary" title="搜索">
+                        <i class="fa fa-search"></i>
+                    </button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="btn-primary flex items-center gap-1 hidden" title="返回全图" id="returnToFullMapBtn"><i class="fa fa-sitemap"></i><span class="hidden sm:inline">返回全图</span></button>
+                    <button class="btn-primary flex items-center gap-1" title="定位始祖" id="locateRootBtn"><i class="fa fa-map-marker"></i><span class="hidden sm:inline">定位始祖</span></button>
+                    <button class="btn-outline flex items-center gap-1" title="放大" id="zoomInBtn"><i class="fa fa-search-plus"></i></button>
+                    <button class="btn-outline flex items-center gap-1" title="缩小" id="zoomOutBtn"><i class="fa fa-search-minus"></i></button>
+                    <button class="btn-outline flex items-center gap-1" title="重置视图" id="resetBtn"><i class="fa fa-refresh"></i></button>
+                </div>
+            </div>
+            
+            <div class="relative flex-1 bg-gray-50 dark:bg-gray-900 md:rounded-lg border-t md:border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="absolute inset-0 cursor-grab" id="familyTreeContainer">
+                    <svg id="familyTree" width="10000" height="6000">
+                        <g id="viewport">
+                            <g id="connections"></g>
+                            <g id="members"></g>
+                        </g>
+                    </svg>
+                </div>
+                <div id="mobileControls" class="absolute bottom-6 right-5 z-20 flex-col gap-3 hidden">
+                    <button class="btn-primary w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-lg" title="定位始祖" id="mobileLocateRootBtn"><i class="fa fa-map-marker"></i></button>
+                    <button class="btn-outline bg-white dark:bg-gray-700 w-12 h-12 rounded-full flex items-center justify-center text-lg shadow-lg" title="放大" id="mobileZoomInBtn"><i class="fa fa-search-plus"></i></button>
+                    <button class="btn-outline bg-white dark:bg-gray-700 w-12 h-12 rounded-full flex items-center justify-center text-lg shadow-lg" title="缩小" id="mobileZoomOutBtn"><i class="fa fa-search-minus"></i></button>
+                </div>
+            </div>
+        </section>
+        
+        <div id="rightResizer" class="hidden md:flex items-center justify-center w-2 cursor-col-resize group">
+             <div class="w-1 h-16 bg-gray-200 dark:bg-gray-600 rounded-full group-hover:bg-secondary transition-colors duration-200"></div>
+        </div>
+
+        <aside id="rightPanel" class="w-full md:w-80 shrink-0 hidden lg:block">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 sticky top-24 h-[calc(100vh-8rem)]">
+                <h2 class="text-lg font-bold text-primary dark:text-gray-100 mb-4 flex items-center"><i class="fa fa-user text-secondary mr-2"></i>成员详情</h2>
+                <div id="detailsWrapper" class="h-[calc(100%-40px)] overflow-y-auto">
+                    <div id="noMemberSelected" class="text-center py-10 text-gray-500 dark:text-gray-400">
+                        <i class="fa fa-hand-pointer-o text-4xl mb-3 text-gray-300 dark:text-gray-600"></i>
+                        <p>请在家族树中点击成员</p>
+                    </div>
+                    <div id="memberDetails" class="hidden"></div>
+                </div>
+            </div>
+        </aside>
+    </main>
+    
+    <nav id="bottomNav" class="bg-white dark:bg-gray-800 border-t dark:border-gray-700 shadow-t-lg justify-around items-center p-2 hidden md:hidden">
+        <button id="showTreeBtn" class="flex flex-col items-center gap-1 text-secondary w-24">
+            <i class="fa fa-sitemap text-2xl"></i>
+            <span class="text-xs font-medium">家谱图</span>
+        </button>
+        <button id="showListBtn" class="flex flex-col items-center gap-1 text-gray-500 dark:text-gray-400 w-24">
+            <i class="fa fa-users text-2xl"></i>
+            <span class="text-xs font-medium">成员列表</span>
+        </button>
+    </nav>
+
+    <div id="mobileMemberModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-end">
+        <div id="mobileModalContent" class="bg-white dark:bg-gray-800 w-full h-[85vh] rounded-t-2xl overflow-y-auto transform transition-transform duration-300 translate-y-full">
+            <div class="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
+                <h2 class="text-lg font-bold text-primary dark:text-gray-100 flex items-center"><i class="fa fa-user text-secondary mr-2"></i>成员详情</h2>
+                <button id="closeModal" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fa fa-times text-gray-600 dark:text-gray-300"></i></button>
+            </div>
+            <div class="p-5" id="mobileMemberDetails"></div>
+        </div>
+    </div>
+    
+    <script>
+    // ----------------------------------------------------------------
+    // 1. 家族数据定义
+    // ----------------------------------------------------------------
+    const familyData = [
+        // 1-2代
+        { id: 1, gen: 1, name: '梁玉华', gender: 'Male', spouses: [2], birth: '约1457-1522年', bio: '梁氏始祖，祖籍广东省嘉应州（今梅州市）。与妻子钟氏合葬于新安“顈蛇形”风水宝地。' },
+        { id: 2, gen: 1, name: '钟氏', gender: 'Female', spouses: [1], bio: '始祖婆，与丈夫梁玉华合葬。' },
+        { id: 3, gen: 2, name: '梁爵', gender: 'Male', spouses: [4], father: 1, mother: 2, birth: '约1487-1547年', bio: '二世祖，始祖之子。与妻子李氏合葬于“老屋角半安茂”。' },
+        { id: 4, gen: 2, name: '李氏', gender: 'Female', spouses: [3], bio: '二世祖婆，与丈夫梁爵合葬。' },
+        
+        // 14-15代
+        { id: 14, gen: 14, name: '梁荣盛', gender: 'Male', spouses: [15], father: 3, mother: 4, birth: '1847年三月初 丑时', bio: '十四世祖，生于南乡童地名范家冲。' },
+        { id: 15, gen: 14, name: '叶氏', gender: 'Female', spouses: [14], birth: '1852年七月初二日寅时', bio: '十四世祖婆，生于叶家河塆芦稿冲新屋。育有四子：华太、华新、华恩、华春。' },
+        
+        { id: 151, gen: 15, name: '梁华太', gender: 'Male', father: 14, mother: 15, bio: '梁荣盛之长子。' },
+        { id: 152, gen: 15, name: '梁华新', gender: 'Male', father: 14, mother: 15, bio: '梁荣盛之次子。' },
+        { id: 153, gen: 15, name: '梁华恩', gender: 'Male', father: 14, mother: 15, bio: '梁荣盛之三子。' },
+
+        { id: 16, gen: 15, name: '梁华春', gender: 'Male', spouses: [1601, 1602, 17], father: 14, mother: 15, birth: '1897年十月初三日巳时', bio: '十五世祖，生于南乡五里万垻子蘭杆井。共三任妻子：葉氏、彭氏、李氏。' },
+        { id: 1601, gen: 15, name: '葉氏', gender: 'Female', spouses: [16], bio: '梁华春之第一任妻，早逝无后。' },
+        { id: 1602, gen: 15, name: '彭氏', gender: 'Female', spouses: [16], bio: '梁华春之第二任妻，早逝无后。' },
+        { id: 17, gen: 15, name: '李氏', gender: 'Female', spouses: [16], birth: '1909年三月初三日已时', bio: '十五世祖婆（第三任），生于隆昌县自郎塆田心纸厂新屋。育有三子二女：顺达、顺忠、顺国、顺贞、顺庚。' },
+
+        // 16代
+        { id: 161, gen: 16, name: '梁顺达', gender: 'Male', spouses: [1611], father: 16, mother: 17, birth: '1940年三月十七日午时', bio: '十六代大房，生于隆昌县石研山东三里毛店子新屋居。' },
+        { id: 1611, gen: 16, name: '肖祥玉', gender: 'Female', spouses: [161], birth: '1942年6月17日未时', bio: '梁顺达之妻，育有四子：吉成、吉发、吉彬、吉德。' },
+        { id: 162, gen: 16, name: '梁顺忠', gender: 'Male', spouses: [1621], father: 16, mother: 17, birth: '1943年十二月廿十六日戍时', bio: '十六代二房，生于隆昌县石研山东三里阴阳塝新屋居。' },
+        { id: 1621, gen: 16, name: '廖华芬', gender: 'Female', spouses: [162], birth: '1945年2月12日末时', death: '2025年7月18日', bio: '梁顺忠之妻，育有三子：吉才、吉明、吉清。过继一女：吉书。葬于石碾镇中心小学后下。' },
+        { id: 163, gen: 16, name: '梁顺国', gender: 'Male', spouses: [1631], father: 16, mother: 17, birth: '1947年正月卅十辰时', bio: '十六代幺房，生于隆昌县石研山东三里阴阳塆新屋居。' },
+        { id: 1631, gen: 16, name: '賀成素', gender: 'Female', spouses: [163], birth: '约1950年正月初二子时', bio: '梁顺国之妻，生于黄河屋居。育有三子女：吉书、吉英、吉友。其中吉书过继给梁顺忠。' },
+        { id: 164, gen: 16, name: '梁顺贞', gender: 'Female', father: 16, mother: 17, birth: '1926年七月初八日戍时', bio: '十六代大女，生于东乡三里石研乡栝牛屋基。' },
+        { id: 165, gen: 16, name: '梁顺庚', gender: 'Female', father: 16, mother: 17, birth: '1950年六月十五日巳时', death: '2010年4月12日', bio: '十六代小女，生于隆昌县石碾乡申三里阴阳塆。' },
+
+        // 17代
+        { id: 171, gen: 17, name: '梁吉德', gender: 'Female', father: 161, mother: 1611, birth: '1965年三月初三寅时', bio: '梁顺达之大女，生于隆昌县人民医院。' },
+        { id: 172, gen: 17, name: '梁吉彬', gender: 'Male', spouses: [1721], father: 161, mother: 1611, birth: '1967年七月廿九日子时', bio: '梁顺达之二子，生于石碾乡。' },
+        { id: 1721, gen: 17, name: '李梅', gender: 'Female', spouses: [172], birth: '1970年七月二日丑时', bio: '梁吉彬之妻，育有一子梁宇。' },
+        { id: 173, gen: 17, name: '梁吉发', gender: 'Male', spouses: [1731], father: 161, mother: 1611, birth: '1969年四月十五日申时', bio: '梁顺达之三子，生于石碾乡梅柳村四组。' },
+        { id: 1731, gen: 17, name: '伍晓红', gender: 'Female', spouses: [173], birth: '1968年5月17日', bio: '梁吉发之妻，生于四川省中江县。' },
+        { id: 174, gen: 17, name: '梁吉成', gender: 'Male', spouses: [1741], father: 161, mother: 1611, birth: '1971年闰五月十三日卯时', bio: '梁顺达之四子，生于石碾乡杨柳村四组。' },
+        { id: 1741, gen: 17, name: '王本莲', gender: 'Female', spouses: [174], birth: '1978年正月二十九日子时', bio: '梁吉成之妻，生于隆昌县团山村三组。育有一女梁媛仪，一子梁玮航。' },
+        
+        { id: 175, gen: 17, name: '梁吉清', gender: 'Male', spouses: [1750, 1751], father: 162, mother: 1621, birth: '1966年九月廿四日亥时', bio: '梁顺忠之大子，生于石碾乡杨刘村四组。' },
+        { id: 1750, gen: 17, name: '邓思平', gender: 'Female', spouses: [175], bio: '梁吉清之前妻，早逝。' },
+        { id: 1751, gen: 17, name: '许长英', gender: 'Female', spouses: [175], birth: '1969年冬月初六未时', bio: '梁吉清之妻（第二任）。' },
+
+        { id: 176, gen: 17, name: '梁吉明', gender: 'Male', spouses: [1761], father: 162, mother: 1621, birth: '1967年腊月初十申时', bio: '梁顺忠之二子，生于石碾乡杨柳村四组。' },
+        { id: 1761, gen: 17, name: '刘春', gender: 'Female', spouses: [176], bio: '梁吉明之妻。' },
+        { id: 177, gen: 17, name: '梁吉才', gender: 'Male', father: 162, mother: 1621, birth: '1972年腊月初十卯时', bio: '梁顺忠之三子，生于石碾乡杨柳村四组。' },
+        { id: 178, gen: 17, name: '梁吉友', gender: 'Male', spouses: [1781], father: 163, mother: 1631, birth: '1969年十月十八日未时', bio: '梁顺国之大子，生于石碾乡杨柳村四组。' },
+        { id: 1781, gen: 17, name: '唐德平', gender: 'Female', spouses: [178], birth: '1972年三月廿九日卯时', bio: '梁吉友之妻，生于漁箭孙家塆村九蒋家石垻子。' },
+        { id: 179, gen: 17, name: '梁吉英', gender: 'Female', father: 163, mother: 1631, birth: '1972年四月卄五日寅时', bio: '梁顺国之二女，生于石碾乡杨柳村四组。' },
+        { id: 1791, gen: 17, name: '梁吉书', gender: 'Female', father: 163, mother: 1631, birth: '1977年九月初十酉时', bio: '梁顺国之三女，生于石碾乡杨柳村四组。后过继给二伯梁顺忠。' },
+
+        // 18代
+        { id: 181, gen: 18, name: '梁琳虹', gender: 'Female', father: 178, mother: 1781, bio: '梁吉友之小女。' },
+        { id: 182, gen: 18, name: '梁钦瑜', gender: 'Male', father: 178, mother: 1781, bio: '梁吉友之长子。' },
+        { id: 183, gen: 18, name: '梁庆', gender: 'Male', father: 177, birth: '2001年二月初七', bio: '梁吉才之子，生于石碾镇人民医院。' },
+        { id: 184, gen: 18, name: '梁媛仪', gender: 'Female', father: 174, mother: 1741, birth: '2003年冬月二十六日申时', bio: '梁吉成之大女，生于隆昌县人民医院。' },
+        { id: 185, gen: 18, name: '梁玮航', gender: 'Male', father: 174, mother: 1741, birth: '2016年十月十八日亥时', bio: '梁吉成之小仔，生于隆昌县人民医院。' },
+        { id: 186, gen: 18, name: '梁家玉', gender: 'Female', father: 175, mother: 1751, birth: '1997年七月初一卯时', bio: '梁吉清之女，生于石碾镇杨柳村。' },
+        { id: 187, gen: 18, name: '梁家霖', gender: 'Male', father: 176, mother: 1761, birth: '1996年六月十八日亥时', bio: '梁吉明之子，生于重庆九龙坡区。' },
+        { id: 188, gen: 18, name: '梁宇', gender: 'Male', father: 172, mother: 1721, birth: '1993年闰三月二十七日亥时', bio: '梁吉彬之子，生于隆昌县人民医院。' },
+    ];
+
+
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // --- DOM Elements ---
+        const svg = document.getElementById('familyTree');
+        const viewport = document.getElementById('viewport');
+        const membersGroup = document.getElementById('members');
+        const connectionsGroup = document.getElementById('connections');
+        const container = document.getElementById('familyTreeContainer');
+        const memberDetailsPanel = document.getElementById('memberDetails');
+        const mobileMemberDetailsPanel = document.getElementById('mobileMemberDetails');
+        const noMemberSelectedPanel = document.getElementById('noMemberSelected');
+        const returnToFullMapBtn = document.getElementById('returnToFullMapBtn');
+        const leftPanel = document.getElementById('leftPanel');
+        const centerPanel = document.getElementById('centerPanel');
+
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+        // --- Constants ---
+        const NODE_WIDTH = 160;
+        const NODE_HEIGHT = 130;
+        const SPOUSE_GAP = 40;
+        const SIBLING_GAP = 50;
+        const GENERATION_GAP = 180;
+
+        // --- Data & State ---
+        const dataMap = new Map(familyData.map(p => [p.id, { ...p, spouses: p.spouses || [] }]));
+        document.getElementById('totalMembers').textContent = `${familyData.length} 人`;
+        const renderedFamilyData = familyData.filter(p => p.name.startsWith('梁'));
+        
+        let positions = new Map();
+        const view = { scale: 0.7, tx: 0, ty: 0, isDragging: false };
+        let activeLayoutShift = null;
+        let animationFrameId = null;
+        let currentFocusRootId = null;
+        let activeData = [];
+        let activeSpouseUnit = null; 
+
+        // --- Core Functions ---
+        function calculateLayout() {
+            positions = new Map();
+            const generationLevels = new Map();
+            activeData.forEach(p => {
+                if (!generationLevels.has(p.gen)) generationLevels.set(p.gen, []);
+                generationLevels.get(p.gen).push(p);
+            });
+
+            const subtreeWidths = new Map();
+            const sortedGens = Array.from(generationLevels.keys()).sort((a, b) => b - a);
+
+            sortedGens.forEach(gen => {
+                generationLevels.get(gen).forEach(person => {
+                    const children = activeData.filter(c => c.father === person.id);
+                    let childrenWidth = children.reduce((acc, child) => acc + (subtreeWidths.get(child.id) || (NODE_WIDTH + SIBLING_GAP)), 0);
+                    const selfWidth = NODE_WIDTH + SIBLING_GAP;
+                    subtreeWidths.set(person.id, Math.max(selfWidth, childrenWidth));
+                });
+            });
+
+            const root = (currentFocusRootId === null)
+                ? activeData.find(p => !p.father)
+                : dataMap.get(currentFocusRootId);
+
+            if (root) {
+                positionNode(root.id, svg.width.baseVal.value / 2, 50, subtreeWidths);
+            }
+        }
+
+        function positionNode(personId, x, y, subtreeWidths) {
+            if (!personId || positions.has(personId)) return;
+            positions.set(personId, { x: x - NODE_WIDTH / 2, y: y });
+
+            const children = activeData.filter(c => c.father === personId).sort((a, b) => a.id - b.id);
+            if (children.length > 0) {
+                const childrenTotalWidth = children.reduce((acc, child) => acc + subtreeWidths.get(child.id), 0);
+                let childX = x - childrenTotalWidth / 2;
+                children.forEach(child => {
+                    const childWidth = subtreeWidths.get(child.id);
+                    positionNode(child.id, childX + childWidth / 2, y + GENERATION_GAP, subtreeWidths);
+                    childX += childWidth;
+                });
+            }
+        }
+        
+        function createCardHTML(person, isSpouse = false) {
+            const genderBorder = person.gender === 'Male' ? 'border-blue-400' : 'border-pink-400';
+            const avatarSize = isSpouse ? 'w-10 h-10' : 'w-12 h-12';
+            return `
+                <div class="member-card h-full dark:bg-gray-700/80 border-t-4 ${genderBorder}" data-id="${person.id}" xmlns="http://www.w3.org/1999/xhtml">
+                    <div class="p-2 flex flex-col items-center justify-center">
+                        <img src="${getAvatar(person)}" alt="${person.name}" class="${avatarSize} rounded-full mb-1 border-2 ${genderBorder}">
+                        <h3 class="font-semibold text-center text-base dark:text-gray-100">${person.name}</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 text-center">第 ${person.gen} 代</p>
+                        ${person.birth ? `<p class="text-xs text-gray-500 dark:text-gray-400 text-center">${person.birth.split('年')[0]}年</p>` : ''}
+                    </div>
+                </div>`;
+        }
+
+        function renderTree() {
+            calculateLayout();
+            membersGroup.innerHTML = '';
+            connectionsGroup.innerHTML = '';
+            activeSpouseUnit = null; 
+
+            activeData.forEach(person => {
+                const pos = positions.get(person.id);
+                if (!pos) return;
+
+                const memberUnit = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                memberUnit.setAttribute('class', 'member-unit');
+                memberUnit.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
+                memberUnit.dataset.id = person.id;
+
+                const primaryObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+                primaryObject.setAttribute('width', NODE_WIDTH);
+                primaryObject.setAttribute('height', NODE_HEIGHT);
+                primaryObject.innerHTML = createCardHTML(person, false);
+                memberUnit.appendChild(primaryObject);
+
+                const personData = dataMap.get(person.id);
+                if (personData.spouses.length > 0) {
+                    const children = familyData.filter(c => c.father === person.id);
+                    const motherId = children.length > 0 ? children[0].mother : null;
+                    const sortedSpouses = [...personData.spouses].sort((a, b) => (a === motherId) ? -1 : (b === motherId) ? 1 : 0).map(id => dataMap.get(id));
+                    
+                    let spouseOffset = NODE_WIDTH + SPOUSE_GAP;
+                    sortedSpouses.forEach(spouse => {
+                        if (!spouse) return;
+                        
+                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        line.setAttribute('class', 'spouse-line');
+                        line.setAttribute('x1', NODE_WIDTH / 2); line.setAttribute('y1', NODE_HEIGHT / 2);
+                        line.setAttribute('x2', spouseOffset + NODE_WIDTH / 2); line.setAttribute('y2', NODE_HEIGHT / 2);
+                        memberUnit.appendChild(line);
+
+                        const spouseContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                        spouseContainer.setAttribute('class', 'spouse-container');
+                        spouseContainer.setAttribute('transform', `translate(${spouseOffset}, 0)`);
+
+                        const spouseAnimator = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                        spouseAnimator.setAttribute('class', 'spouse-animator');
+                        
+                        const spouseObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+                        spouseObject.setAttribute('width', NODE_WIDTH);
+                        spouseObject.setAttribute('height', NODE_HEIGHT);
+                        spouseObject.innerHTML = createCardHTML(spouse, true);
+                        
+                        spouseAnimator.appendChild(spouseObject);
+                        spouseContainer.appendChild(spouseAnimator);
+                        memberUnit.appendChild(spouseContainer);
+                        
+                        spouseOffset += NODE_WIDTH + SPOUSE_GAP;
+                    });
+                }
+                
+                membersGroup.appendChild(memberUnit);
+
+                const fatherId = person.father;
+                if (fatherId && activeData.some(p => p.id === fatherId)) {
+                    const fatherPos = positions.get(fatherId);
+                    if (fatherPos) {
+                        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        path.dataset.parentId = fatherId;
+                        path.dataset.childId = person.id;
+                        path.setAttribute('d', getPathD(fatherPos, pos));
+                        path.setAttribute('class', 'tree-line');
+                        connectionsGroup.appendChild(path);
+                    }
+                }
+            });
+
+            if (!isTouchDevice) {
+                addSpouseHoverListeners();
+            }
+        }
+
+        function getPathD(parentPos, childPos) {
+            const parentCenterX = parentPos.x + NODE_WIDTH / 2;
+            const parentBottomY = parentPos.y + NODE_HEIGHT;
+            const childCenterX = childPos.x + NODE_WIDTH / 2;
+            const childTopY = childPos.y;
+            const midY = parentBottomY + (childTopY - parentBottomY) / 2;
+            return `M ${parentCenterX} ${parentBottomY} V ${midY} H ${childCenterX} V ${childTopY}`;
+        }
+        
+        function updateDetailsPanel(personId) {
+            const person = dataMap.get(personId);
+            if (!person) return;
+            const father = dataMap.get(person.father);
+            const mother = dataMap.get(person.mother);
+            const spouses = person.spouses.map(id => dataMap.get(id));
+            const children = familyData.filter(p => p.father === person.id || (p.mother === person.id && !p.father));
+            const hasDescendants = familyData.some(p => p.father === person.id);
+
+            let detailsHTML = `
+                <div class="text-center mb-6">
+                    <img src="${getAvatar(person)}" alt="${person.name}" class="w-24 h-24 rounded-full mx-auto mb-3 border-4 ${person.gender === 'Male' ? 'border-blue-400' : 'border-pink-400'}">
+                    <h3 class="text-2xl font-bold dark:text-gray-100">${person.name}</h3>
+                    <p class="text-gray-500 dark:text-gray-400">${person.birth || ''} ${person.death ? `- ${person.death}` : ''}</p>
+                    <div class="mt-2 inline-block bg-secondary/10 text-secondary text-sm px-3 py-1 rounded-full">第 ${person.gen} 代</div>
+                </div>
+                <div class="bg-neutral dark:bg-gray-700/50 rounded-lg p-4 mb-5">
+                    <h4 class="font-semibold mb-3 text-gray-700 dark:text-gray-200">生平简介</h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">${person.bio || '暂无信息'}</p>
+                </div>`;
+            
+            if (hasDescendants) {
+                detailsHTML += `
+                <div class="mb-5">
+                    <button onclick="focusOnBranch(${person.id})" class="btn-primary w-full flex items-center justify-center gap-2">
+                        <i class="fa fa-crosshairs"></i>聚焦此分支
+                    </button>
+                </div>`;
+            }
+
+            detailsHTML += `
+                <div>
+                    <h4 class="font-semibold mb-3 text-gray-700 dark:text-gray-200">家族关系</h4>
+                    <div class="space-y-4">
+                        ${father || mother ? `<div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">父母</p>
+                            ${father ? createRelationChip(father) : ''}
+                            ${mother ? createRelationChip(mother) : ''}
+                        </div>` : ''}
+                        ${spouses.length > 0 ? `<div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">配偶</p><div class="space-y-2">${spouses.map(p => createRelationChip(p, true)).join('')}</div></div>` : ''}
+                        ${children.length > 0 ? `<div><p class="text-xs text-gray-500 dark:text-gray-400 mb-1">子女</p><div class="space-y-2">${children.map(p => createRelationChip(p)).join('')}</div></div>` : ''}
+                    </div>
+                </div>`;
+            
+            memberDetailsPanel.innerHTML = detailsHTML;
+            mobileMemberDetailsPanel.innerHTML = detailsHTML;
+            noMemberSelectedPanel.classList.add('hidden');
+            memberDetailsPanel.classList.remove('hidden', 'fade-in');
+            void memberDetailsPanel.offsetWidth;
+            memberDetailsPanel.classList.add('fade-in');
+        }
+
+        function getAvatar(person) {
+            let nameChar = '';
+            if (person.name.endsWith('氏')) {
+                nameChar = person.name.substring(0, 1);
+            } else {
+                nameChar = person.name.slice(-1);
+            }
+            const bgColor = person.gender === 'Male' ? '4299E1' : (person.gender === 'Female' ? 'EC4899' : '9CA3AF');
+            return `https://ui-avatars.com/api/?name=${encodeURIComponent(nameChar)}&background=${bgColor}&color=fff&size=64&font-size=0.5&bold=true`;
+        }
+        
+        function createRelationChip(person, isSpouse = false) {
+            if (!person) return '';
+            const focusTargetId = isSpouse ? person.id : (person.name.startsWith('梁') ? person.id : person.father);
+            return `
+                <div class="flex items-center gap-3 bg-white dark:bg-gray-700 rounded-lg p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 border dark:border-gray-600" onclick="focusOnPerson(${person.id}, ${focusTargetId})">
+                    <img src="${getAvatar(person)}" alt="${person.name}" class="w-10 h-10 rounded-full">
+                    <div>
+                        <p class="font-medium dark:text-gray-200">${person.name}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">第 ${person.gen} 代</p>
+                    </div>
+                </div>`;
+        }
+        
+        function highlightPerson(personId) {
+            document.querySelectorAll('.viewfinder-path').forEach(p => p.remove());
+            const card = document.querySelector(`.member-card[data-id="${personId}"]`);
+            const memberUnit = card ? card.closest('.member-unit') : null;
+
+            if (memberUnit) {
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const cornerLength = 20;
+                const padding = 6;
+                const w = NODE_WIDTH; 
+                const h = NODE_HEIGHT;
+                const d = [
+                    `M ${-padding + cornerLength},${-padding} L ${-padding},${-padding} L ${-padding},${-padding + cornerLength}`,
+                    `M ${w + padding - cornerLength},${-padding} L ${w + padding},${-padding} L ${w + padding},${-padding + cornerLength}`,
+                    `M ${w + padding},${h + padding - cornerLength} L ${w + padding},${h + padding} L ${w + padding - cornerLength},${h + padding}`,
+                    `M ${-padding + cornerLength},${h + padding} L ${-padding},${h + padding} L ${-padding},${h + padding - cornerLength}`
+                ].join(' ');
+                path.setAttribute('d', d);
+                path.setAttribute('class', 'viewfinder-path');
+                const totalLength = (cornerLength * 2) * 4;
+                path.style.strokeDasharray = totalLength;
+                path.style.strokeDashoffset = totalLength;
+                path.style.animation = 'draw-viewfinder-anim 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards';
+                memberUnit.appendChild(path);
+            }
+        }
+
+        window.focusOnPerson = function(personId, focusNodeId) {
+            const focusId = focusNodeId || personId;
+            const person = dataMap.get(personId);
+            const nodeToCenterOn = (person && person.name.startsWith('梁')) ? person.id : person.father || focusId;
+            
+            if (nodeToCenterOn && positions.has(nodeToCenterOn)) {
+                centerOnNode(nodeToCenterOn);
+            }
+            updateDetailsPanel(personId);
+            highlightPerson(personId);
+        }
+        
+        function getDescendants(rootId) {
+            const branchIds = new Set();
+            const queue = [rootId];
+            branchIds.add(rootId);
+
+            while (queue.length > 0) {
+                const currentId = queue.shift();
+                const children = familyData.filter(p => p.father === currentId);
+                for (const child of children) {
+                    if (!branchIds.has(child.id)) {
+                        branchIds.add(child.id);
+                        queue.push(child.id);
+                    }
+                }
+            }
+            return Array.from(branchIds).map(id => dataMap.get(id));
+        }
+
+        window.focusOnBranch = function(personId) {
+            currentFocusRootId = personId;
+            activeData = getDescendants(personId).filter(p => p.name.startsWith('梁'));
+            
+            renderTree();
+            focusOnPerson(personId);
+
+            returnToFullMapBtn.classList.remove('hidden');
+            document.getElementById('locateRootBtn').classList.add('hidden');
+        }
+        
+        function returnToFullMap() {
+            currentFocusRootId = null;
+            activeData = renderedFamilyData;
+            
+            renderTree();
+            const originalRoot = renderedFamilyData.find(p => !p.father);
+            if(originalRoot) focusOnPerson(originalRoot.id);
+            
+            returnToFullMapBtn.classList.add('hidden');
+            document.getElementById('locateRootBtn').classList.remove('hidden');
+        }
+
+
+        function updateTransform() {
+            viewport.setAttribute('transform', `translate(${view.tx}, ${view.ty}) scale(${view.scale})`);
+        }
+
+        function centerOnNode(nodeId, newScale) {
+            const targetScale = newScale !== undefined ? newScale : 0.8;
+            const pos = positions.get(nodeId);
+            if (!pos) return;
+
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            
+            const targetX = (containerWidth / 2) - ((pos.x + NODE_WIDTH / 2) * targetScale);
+            const targetY = (containerHeight / 2) - ((pos.y + NODE_HEIGHT / 2) * targetScale);
+            
+            smoothTransitionTo(targetX, targetY, targetScale);
+        }
+
+        function smoothTransitionTo(targetX, targetY, targetScale) {
+            const startX = view.tx;
+            const startY = view.ty;
+            const startScale = view.scale;
+            const duration = 750;
+            let startTime = null;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+            function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+            function animate(currentTime) {
+                if (startTime === null) startTime = currentTime;
+                const progress = Math.min((currentTime - startTime) / duration, 1);
+                const easedProgress = easeOutCubic(progress);
+                view.tx = startX + (targetX - startX) * easedProgress;
+                view.ty = startY + (targetY - startY) * easedProgress;
+                view.scale = startScale + (targetScale - startScale) * easedProgress;
+                updateTransform();
+                if (progress < 1) animationFrameId = requestAnimationFrame(animate);
+                else animationFrameId = null;
+            }
+            animationFrameId = requestAnimationFrame(animate);
+        }
+        
+        membersGroup.addEventListener('click', function(e) {
+            const card = e.target.closest('.member-card');
+            if (card) {
+                e.stopPropagation();
+                const id = parseInt(card.dataset.id);
+                
+                if (isTouchDevice) {
+                    const unit = card.closest('.member-unit');
+                    if (activeSpouseUnit && activeSpouseUnit !== unit) {
+                        handleHideSpouses(activeSpouseUnit);
+                    }
+                    if (unit.classList.contains('spouses-visible')) {
+                        handleHideSpouses(unit);
+                        activeSpouseUnit = null;
+                    } else {
+                        handleShowSpouses(unit);
+                        activeSpouseUnit = unit;
+                    }
+                }
+
+                highlightPerson(id);
+                updateDetailsPanel(id);
+
+                if (window.innerWidth < 1024) {
+                    document.getElementById('mobileMemberModal').classList.add('flex');
+                    document.getElementById('mobileMemberModal').classList.remove('hidden');
+                    document.body.style.overflow = 'hidden';
+                    setTimeout(() => document.getElementById('mobileModalContent').classList.remove('translate-y-full'), 10);
+                }
+            }
+        });
+        
+        function addSpouseHoverListeners() {
+            document.querySelectorAll('.member-unit').forEach(unit => {
+                unit.addEventListener('mouseenter', () => {
+                    const hideTimeoutId = unit.dataset.hideTimeout;
+                    if (hideTimeoutId) {
+                        clearTimeout(parseInt(hideTimeoutId));
+                        unit.removeAttribute('data-hide-timeout');
+                    }
+                    handleShowSpouses(unit);
+                });
+                unit.addEventListener('mouseleave', () => {
+                    const timeoutId = setTimeout(() => { handleHideSpouses(unit); }, 200);
+                    unit.dataset.hideTimeout = timeoutId;
+                });
+            });
+        }
+
+        function handleShowSpouses(unit) {
+            if (activeLayoutShift && activeLayoutShift.unit === unit) return;
+            if (activeLayoutShift) handleHideSpouses(activeLayoutShift.unit);
+            
+            const personId = parseInt(unit.dataset.id);
+            const person = dataMap.get(personId);
+            if (!person || person.spouses.length === 0) return;
+
+            const expansionWidth = person.spouses.length * (NODE_WIDTH + SPOUSE_GAP);
+            applyLayoutShift(unit, expansionWidth);
+            unit.classList.add('spouses-visible');
+        }
+
+        function handleHideSpouses(unit) {
+            if (!unit) return;
+            if (activeLayoutShift && activeLayoutShift.unit === unit) {
+                 undoLayoutShift();
+            }
+            unit.classList.remove('spouses-visible');
+        }
+
+        function applyLayoutShift(hoveredUnit, expansionWidth) {
+            const hoveredId = parseInt(hoveredUnit.dataset.id);
+            const hoveredPos = positions.get(hoveredId);
+            if (!hoveredPos) return;
+            activeLayoutShift = { unit: hoveredUnit, shiftedNodes: [], shiftedPaths: [] };
+
+            membersGroup.querySelectorAll('.member-unit').forEach(unit => {
+                const unitId = parseInt(unit.dataset.id);
+                const unitPos = positions.get(unitId);
+                if (unitId !== hoveredId && unitPos && unitPos.x > hoveredPos.x) {
+                    const newX = unitPos.x + expansionWidth;
+                    unit.setAttribute('transform', `translate(${newX}, ${unitPos.y})`);
+                    activeLayoutShift.shiftedNodes.push({ unit, originalPos: unitPos });
+                }
+            });
+            connectionsGroup.querySelectorAll('path').forEach(path => {
+                const parentId = parseInt(path.dataset.parentId);
+                const childId = parseInt(path.dataset.childId);
+                const parentPos = { ...positions.get(parentId) };
+                const childPos = { ...positions.get(childId) };
+                let pathShifted = false;
+                if (parentPos.x > hoveredPos.x) { parentPos.x += expansionWidth; pathShifted = true; }
+                if (childPos.x > hoveredPos.x) { childPos.x += expansionWidth; pathShifted = true; }
+                if (pathShifted) {
+                    const originalD = getPathD(positions.get(parentId), positions.get(childId));
+                    path.setAttribute('d', getPathD(parentPos, childPos));
+                    activeLayoutShift.shiftedPaths.push({ path, originalD });
+                }
+            });
+        }
+
+        function undoLayoutShift() {
+            if (!activeLayoutShift) return;
+            activeLayoutShift.shiftedNodes.forEach(item => item.unit.setAttribute('transform', `translate(${item.originalPos.x}, ${item.originalPos.y})`));
+            activeLayoutShift.shiftedPaths.forEach(item => item.path.setAttribute('d', item.originalD));
+            activeLayoutShift = null;
+        }
+        
+        function buildAndAttachMemberList() {
+            const memberListDiv = document.getElementById('memberList');
+            if (!memberListDiv) return;
+            const generations = new Map();
+            familyData.forEach(p => {
+                if (!generations.has(p.gen)) generations.set(p.gen, []);
+                generations.get(p.gen).push(p);
+            });
+            let html = '<ul class="space-y-1 text-sm">';
+            const sortedGens = Array.from(generations.keys()).sort((a, b) => a - b);
+            for (const gen of sortedGens) {
+                const liangMembers = generations.get(gen).filter(member => member.name.startsWith('梁')).sort((a, b) => a.id - b.id);
+                if (liangMembers.length > 0) {
+                    let genLabel = (gen === 1) ? '始祖公' : (gen === 2) ? '二世祖公' : (gen <= 16) ? `第 ${gen} 代祖` : `第 ${gen} 代`;
+                    html += `<li>
+                        <div class="flex items-center cursor-pointer p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 member-list-toggle">
+                            <i class="fa fa-caret-right w-4 transition-transform duration-200"></i>
+                            <span class="font-semibold text-primary dark:text-gray-300">${genLabel}</span>
+                        </div>
+                        <ul class="nested-list ml-3 border-l border-gray-200 dark:border-gray-600 pl-3 hidden">`;
+                    for (const member of liangMembers) {
+                        html += `<li class="mt-1"><div class="p-1.5 rounded-md hover:bg-secondary/10 cursor-pointer member-list-name" data-id="${member.id}">${member.name}</div></li>`;
+                    }
+                    html += `</ul></li>`;
+                }
+            }
+            html += '</ul>';
+            memberListDiv.innerHTML = html;
+            document.querySelectorAll('.member-list-toggle').forEach(toggle => {
+                toggle.addEventListener('click', () => {
+                    toggle.nextElementSibling.classList.toggle('hidden');
+                    toggle.querySelector('i').classList.toggle('rotate-90');
+                });
+            });
+            document.querySelectorAll('.member-list-name').forEach(nameEl => {
+                nameEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = parseInt(nameEl.dataset.id);
+                    document.querySelectorAll('.member-list-name').forEach(el => el.classList.remove('bg-secondary', 'text-white', 'font-semibold'));
+                    nameEl.classList.add('bg-secondary', 'text-white', 'font-semibold');
+                    focusOnPerson(id, id);
+                    if (isTouchDevice) {
+                        document.getElementById('showTreeBtn').click();
+                    }
+                });
+            });
+        }
+
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+        const mobileSearchInput = document.getElementById('mobileSearchInput');
+        const mobileSearchButton = document.getElementById('mobileSearchButton');
+
+        function performSearch(term) {
+            if (!term) return;
+            const personFound = familyData.find(p => p.name === term);
+            if (personFound) {
+                focusOnPerson(personFound.id);
+                searchInput.value = '';
+                mobileSearchInput.value = '';
+                if (isTouchDevice) {
+                    document.getElementById('showTreeBtn').click();
+                }
+            } else {
+                alert(`未找到名为 "${term}" 的成员。\n请确保输入了完整且正确的姓名。`);
+            }
+        }
+
+        searchButton.addEventListener('click', () => performSearch(searchInput.value.trim()));
+        searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearch(searchInput.value.trim()); });
+        mobileSearchButton.addEventListener('click', () => performSearch(mobileSearchInput.value.trim()));
+        mobileSearchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearch(mobileSearchInput.value.trim()); });
+
+        if (!isTouchDevice) {
+            container.addEventListener('mousedown', e => {
+                if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
+                if (e.target.closest('.member-card')) return;
+                view.isDragging = true;
+                container.style.cursor = 'grabbing';
+            });
+            document.addEventListener('mousemove', e => {
+                if (!view.isDragging) return;
+                view.tx += e.movementX;
+                view.ty += e.movementY;
+                updateTransform();
+            });
+            document.addEventListener('mouseup', () => {
+                view.isDragging = false;
+                container.style.cursor = 'grab';
+            });
+            container.addEventListener('wheel', e => {
+                e.preventDefault();
+                if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
+                const scaleAmount = 1.1;
+                const rect = container.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
+                const worldX = (mouseX - view.tx) / view.scale; const worldY = (mouseY - view.ty) / view.scale;
+                view.scale *= (e.deltaY < 0 ? scaleAmount : 1 / scaleAmount);
+                view.scale = Math.min(Math.max(0.1, view.scale), 2);
+                view.tx = mouseX - worldX * view.scale; view.ty = mouseY - worldY * view.scale;
+                updateTransform();
+            });
+        } else {
+            let initialPinchDistance = null;
+            let lastTouch = null;
+
+            container.addEventListener('touchstart', e => {
+                if (e.target.closest('.member-card')) return;
+                if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
+                
+                if (e.touches.length === 2) {
+                    e.preventDefault();
+                    initialPinchDistance = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                } else if (e.touches.length === 1) {
+                    e.preventDefault();
+                    lastTouch = { x: e.touches[0].pageX, y: e.touches[0].pageY };
+                    view.isDragging = true;
+                }
+            });
+
+            container.addEventListener('touchmove', e => {
+                if (e.target.closest('.member-card')) return;
+
+                if (e.touches.length === 2 && initialPinchDistance) {
+                    e.preventDefault();
+                    const newPinchDistance = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                    const scaleAmount = newPinchDistance / initialPinchDistance;
+
+                    const rect = container.getBoundingClientRect();
+                    const midX = (e.touches[0].pageX + e.touches[1].pageX) / 2 - rect.left;
+                    const midY = (e.touches[0].pageY + e.touches[1].pageY) / 2 - rect.top;
+                    const worldX = (midX - view.tx) / view.scale;
+                    const worldY = (midY - view.ty) / view.scale;
+
+                    const newScale = Math.min(Math.max(0.1, view.scale * scaleAmount), 2);
+                    view.tx = midX - worldX * newScale;
+                    view.ty = midY - worldY * newScale;
+                    view.scale = newScale;
+                    
+                    updateTransform();
+                    initialPinchDistance = newPinchDistance;
+
+                } else if (e.touches.length === 1 && view.isDragging) {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    view.tx += touch.pageX - lastTouch.x;
+                    view.ty += touch.pageY - lastTouch.y;
+                    lastTouch = { x: touch.pageX, y: touch.pageY };
+                    updateTransform();
+                }
+            });
+
+            container.addEventListener('touchend', e => {
+                initialPinchDistance = null;
+                lastTouch = null;
+                view.isDragging = false;
+            });
+        }
+        
+        document.getElementById('zoomInBtn').addEventListener('click', () => { 
+            const newScale = Math.min(view.scale * 1.25, 2);
+            smoothTransitionTo(view.tx, view.ty, newScale);
+        });
+        document.getElementById('zoomOutBtn').addEventListener('click', () => {
+            const newScale = Math.max(view.scale / 1.25, 0.1);
+            smoothTransitionTo(view.tx, view.ty, newScale);
+        });
+        document.getElementById('resetBtn').addEventListener('click', () => focusOnPerson(1));
+        document.getElementById('locateRootBtn').addEventListener('click', () => focusOnPerson(1));
+        returnToFullMapBtn.addEventListener('click', returnToFullMap);
+        
+        document.getElementById('mobileZoomInBtn').addEventListener('click', () => { 
+            document.getElementById('zoomInBtn').click();
+        });
+        document.getElementById('mobileZoomOutBtn').addEventListener('click', () => {
+            document.getElementById('zoomOutBtn').click();
+        });
+        document.getElementById('mobileLocateRootBtn').addEventListener('click', () => {
+            if(returnToFullMapBtn.classList.contains('hidden')) {
+                document.getElementById('locateRootBtn').click();
+            } else {
+                returnToFullMapBtn.click();
+            }
+        });
+
+        document.getElementById('closeModal').addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent event bubbling on iOS
+            const modal = document.getElementById('mobileMemberModal');
+            const modalContent = document.getElementById('mobileModalContent');
+            modalContent.classList.add('translate-y-full');
+            setTimeout(() => {
+                modal.classList.add('hidden'); modal.classList.remove('flex');
+                document.body.style.overflow = '';
+            }, 300);
+        });
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const themeIcon = document.getElementById('theme-icon');
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            themeIcon.classList.replace('fa-moon-o', 'fa-sun-o');
+        }
+        darkModeToggle.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            if (document.documentElement.classList.contains('dark')) {
+                localStorage.setItem('theme', 'dark');
+                themeIcon.classList.replace('fa-moon-o', 'fa-sun-o');
+            } else {
+                localStorage.setItem('theme', 'light');
+                themeIcon.classList.replace('fa-sun-o', 'fa-moon-o');
+            }
+        });
+
+        // --- Mobile View Toggling ---
+        if (document.getElementById('bottomNav')) {
+            const mainTitle = document.getElementById('mainTitle');
+            const showTreeBtn = document.getElementById('showTreeBtn');
+            const showListBtn = document.getElementById('showListBtn');
+            const bodyEl = document.body;
+
+            showTreeBtn.addEventListener('click', () => {
+                bodyEl.classList.remove('mobile-list-view');
+                mainTitle.textContent = "家谱关系图";
+                showTreeBtn.classList.add('text-secondary');
+                showTreeBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
+                showListBtn.classList.add('text-gray-500', 'dark:text-gray-400');
+                showListBtn.classList.remove('text-secondary');
+            });
+            showListBtn.addEventListener('click', () => {
+                bodyEl.classList.add('mobile-list-view');
+                mainTitle.textContent = "成员列表";
+                showListBtn.classList.add('text-secondary');
+                showListBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
+                showTreeBtn.classList.add('text-gray-500', 'dark:text-gray-400');
+                showTreeBtn.classList.remove('text-secondary');
+            });
+        }
+
+
+        // --- Initial Call ---
+        activeData = renderedFamilyData;
+        renderTree();
+        buildAndAttachMemberList();
+        setTimeout(() => {
+            const root = activeData.find(p => !p.father);
+            if(root) {
+                const pos = positions.get(root.id);
+                const initialScale = isTouchDevice ? 0.45 : 0.7;
+                if(pos) {
+                    view.tx = (container.clientWidth / 2) - ((pos.x + NODE_WIDTH / 2) * initialScale);
+                    view.ty = 80; // Use a fixed top offset for mobile robustness
+                    view.scale = initialScale;
+                    updateTransform();
+                }
+            }
+        }, 100);
+        
+        const leftResizer = document.getElementById('leftResizer');
+        const rightResizer = document.getElementById('rightResizer');
+        const MIN_PANEL_WIDTH = 200;
+        function createResizerHandler(panel, direction) {
+            return function (e) {
+                e.preventDefault();
+                const startX = e.clientX;
+                const startWidth = panel.offsetWidth;
+                document.body.classList.add('resizing');
+                function handleMouseMove(e) {
+                    const delta = e.clientX - startX;
+                    const newWidth = startWidth + (direction === 'left' ? delta : -delta);
+                    if (newWidth > MIN_PANEL_WIDTH) { panel.style.flexBasis = newWidth + 'px'; }
+                }
+                function handleMouseUp() {
+                    document.body.classList.remove('resizing');
+                    document.removeEventListener('mousemove', handleMouseMove);
+                    document.removeEventListener('mouseup', handleMouseUp);
+                }
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+            };
+        }
+        if (leftResizer) { leftResizer.addEventListener('mousedown', createResizerHandler(leftPanel, 'left')); }
+        if (rightResizer) { rightResizer.addEventListener('mousedown', createResizerHandler(document.getElementById('rightPanel'), 'right')); }
+    });
+    </script>
+</body>
+</html>
     </script>
     
     <style type="text/tailwindcss">
