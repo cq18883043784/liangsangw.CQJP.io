@@ -53,7 +53,6 @@
                 from { opacity: 0; transform: translateY(10px); }
                 to { opacity: 1; transform: translateY(0); }
             }
-            /* --- NEW: Mobile Touch Optimizations --- */
             #familyTreeContainer {
                 touch-action: none;
                 -webkit-user-select: none;
@@ -98,7 +97,7 @@
         }
 
         .viewfinder-path {
-            stroke: #8B5CF6; /* Corresponds to 'secondary' color */
+            stroke: #8B5CF6;
             stroke-width: 2.5;
             fill: none;
             stroke-linecap: round;
@@ -136,9 +135,9 @@
         </div>
     </header>
 
-    <main class="flex-1 px-4 py-6 flex flex-col md:flex-row gap-2">
-        <aside id="leftPanel" class="w-full md:w-64 lg:w-72 shrink-0" style="min-width: 200px;">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 sticky top-24 h-full flex flex-col">
+    <main class="flex-1 px-4 py-6 block md:flex gap-2">
+        <aside id="leftPanel" class="w-full md:w-64 lg:w-72 shrink-0 md:sticky md:top-24 mb-4 md:mb-0" style="min-width: 200px;">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 h-full flex flex-col">
                 <div class="mb-6 shrink-0">
                     <h2 class="text-lg font-bold text-primary dark:text-gray-100 mb-3 flex items-center"><i class="fa fa-home text-secondary mr-2"></i>家族信息</h2>
                     <div class="bg-neutral dark:bg-gray-700/50 rounded-lg p-4">
@@ -173,7 +172,7 @@
             <div class="w-1 h-16 bg-gray-200 dark:bg-gray-600 rounded-full group-hover:bg-secondary transition-colors duration-200"></div>
         </div>
         
-        <section id="centerPanel" class="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5" style="min-width: 400px;">
+        <section id="centerPanel" class="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5" style="min-width: 300px;">
             <div class="flex flex-wrap items-center justify-between mb-6 gap-3">
                 <div>
                     <h2 class="text-xl font-bold text-primary dark:text-gray-100">家谱关系图</h2>
@@ -198,7 +197,7 @@
                 </div>
             </div>
             
-            <div class="relative bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden" style="height: 85vh;">
+            <div class="relative bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden h-[70vh] md:h-[85vh]">
                 <div class="absolute inset-0 overflow-auto cursor-grab" id="familyTreeContainer">
                     <svg id="familyTree" width="10000" height="6000">
                         <g id="viewport">
@@ -338,7 +337,7 @@
 
         let currentFocusRootId = null;
         let activeData = [];
-        let activeSpouseUnit = null; // For touch device spouse toggling
+        let activeSpouseUnit = null; 
 
 
         function calculateLayout() {
@@ -861,7 +860,6 @@
         searchButton.addEventListener('click', performSearch);
         searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearch(); });
 
-        // --- Pan and Zoom Logic ---
         if (!isTouchDevice) {
             container.addEventListener('mousedown', e => {
                 if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
@@ -892,7 +890,6 @@
                 updateTransform();
             });
         } else {
-            // --- Touch Controls for Mobile ---
             let initialPinchDistance = null;
             let lastTouch = null;
 
@@ -900,10 +897,10 @@
                 if (e.target.closest('.member-card')) return;
                 if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
                 
-                if (e.touches.length === 2) { // Pinch Zoom
+                if (e.touches.length === 2) {
                     e.preventDefault();
                     initialPinchDistance = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-                } else if (e.touches.length === 1) { // Pan
+                } else if (e.touches.length === 1) {
                     e.preventDefault();
                     lastTouch = { x: e.touches[0].pageX, y: e.touches[0].pageY };
                     view.isDragging = true;
@@ -913,7 +910,7 @@
             container.addEventListener('touchmove', e => {
                 if (e.target.closest('.member-card')) return;
 
-                if (e.touches.length === 2 && initialPinchDistance) { // Pinch Zoom
+                if (e.touches.length === 2 && initialPinchDistance) {
                     e.preventDefault();
                     const newPinchDistance = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
                     const scaleAmount = newPinchDistance / initialPinchDistance;
@@ -932,7 +929,7 @@
                     updateTransform();
                     initialPinchDistance = newPinchDistance;
 
-                } else if (e.touches.length === 1 && view.isDragging) { // Pan
+                } else if (e.touches.length === 1 && view.isDragging) {
                     e.preventDefault();
                     const touch = e.touches[0];
                     view.tx += touch.pageX - lastTouch.x;
@@ -991,17 +988,20 @@
         activeData = renderedFamilyData;
         renderTree();
         buildAndAttachMemberList();
-        const root = activeData.find(p => !p.father);
-        if(root) {
-            const pos = positions.get(root.id);
-            const scale = 0.7;
-            if(pos) {
-                view.tx = (container.clientWidth / 2) - ((pos.x + NODE_WIDTH / 2) * scale);
-                view.ty = (container.clientHeight / 2) - ((pos.y + NODE_HEIGHT / 2) * scale);
-                view.scale = scale;
-                updateTransform();
+        // MODIFICATION: Delay initial centering to ensure layout is ready
+        setTimeout(() => {
+            const root = activeData.find(p => !p.father);
+            if(root) {
+                const pos = positions.get(root.id);
+                const scale = 0.7;
+                if(pos) {
+                    view.tx = (container.clientWidth / 2) - ((pos.x + NODE_WIDTH / 2) * scale);
+                    view.ty = (container.clientHeight / 2) - ((pos.y + NODE_HEIGHT / 2) * scale);
+                    view.scale = scale;
+                    updateTransform();
+                }
             }
-        }
+        }, 50);
         
         const leftPanel = document.getElementById('leftPanel');
         const rightPanel = document.getElementById('rightPanel');
