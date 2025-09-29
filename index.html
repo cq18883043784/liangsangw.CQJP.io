@@ -37,8 +37,11 @@
                 fill: none;
                 transition: d 0.5s ease-in-out;
             }
+            /* --- REFACTORED: Card is now pure HTML --- */
             .member-card {
-                @apply relative bg-white rounded-lg shadow-md transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-secondary/20 dark:hover:shadow-secondary/30 hover:-translate-y-1;
+                @apply absolute bg-white rounded-lg shadow-md transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-secondary/20 dark:hover:shadow-secondary/30 hover:-translate-y-1;
+                -webkit-backface-visibility: hidden;
+                backface-visibility: hidden;
             }
             .btn-primary {
                 @apply bg-secondary hover:bg-secondary/90 text-white font-medium py-2 px-4 rounded-md transition-all duration-200;
@@ -60,59 +63,61 @@
                 -ms-user-select: none;
                 user-select: none;
             }
+            /* --- NEW: Highlight effect for HTML cards --- */
+            .highlight-card {
+                @apply ring-2 ring-offset-2 ring-secondary dark:ring-offset-gray-800;
+                box-shadow: 0 0 20px 5px theme('colors.secondary / 40%');
+            }
         }
         body.resizing, body.resizing * {
             cursor: col-resize !important;
             user-select: none;
         }
-
-        .member-unit {
-            transition: transform 0.5s ease-in-out;
-        }
-
-        .spouse-container, .spouse-line {
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out;
-        }
-
-        .spouse-animator {
-            transform: scaleX(0);
-            transform-origin: left center;
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .member-unit.spouses-visible .spouse-container,
-        .member-unit.spouses-visible .spouse-line {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .member-unit.spouses-visible .spouse-animator {
-            transform: scaleX(1);
-        }
-
-        .dark .tree-line {
-            stroke: #6B7280;
-        }
-
-        .viewfinder-path {
-            stroke: #8B5CF6;
-            stroke-width: 2.5;
-            fill: none;
-            stroke-linecap: round;
-        }
-
-        @keyframes draw-viewfinder-anim {
-            to {
-                stroke-dashoffset: 0;
-            }
-        }
     </style>
     <style>
+      /* --- REFACTORED: More robust mobile layout and spouse visibility --- */
+      #panzoomContainer {
+        transform-origin: 0 0;
+      }
+      .member-unit {
+        position: absolute;
+      }
+      .spouse-unit {
+        position: absolute;
+        opacity: 0;
+        visibility: hidden;
+        transform: scaleX(0);
+        transform-origin: left center;
+        transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .member-unit.spouses-visible .spouse-unit {
+        opacity: 1;
+        visibility: visible;
+        transform: scaleX(1);
+      }
+      .spouse-line {
+        position: absolute;
+        width: 40px; /* SPOUSE_GAP */
+        height: 1.5px;
+        background-color: #9CA3AF;
+        transform-origin: left center;
+        opacity: 0;
+        visibility: hidden;
+        transform: scaleX(0);
+        transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .dark .spouse-line {
+        background-color: #6B7280;
+      }
+      .member-unit.spouses-visible .spouse-line {
+        opacity: 1;
+        visibility: visible;
+        transform: scaleX(1);
+      }
+
       @media (max-width: 767px) {
         html, body {
-          height: 100%; /* Use 100% instead of 100vh for iOS compatibility */
+          height: 100%;
           overflow: hidden;
         }
         body {
@@ -125,14 +130,13 @@
           overflow: hidden;
           position: relative;
         }
-        /* Panels */
         #centerPanel {
           display: flex !important;
           flex: 1 1 0%;
           padding: 0 !important;
         }
         #leftPanel {
-          display: none !important; /* Start hidden */
+          display: none !important;
           position: absolute;
           top: 0;
           left: 0;
@@ -140,19 +144,15 @@
           height: 100%;
           z-index: 100;
         }
-        /* Mobile View Toggling Logic */
         body.mobile-list-view #leftPanel {
             display: flex !important;
         }
         body.mobile-list-view #centerPanel {
             display: none !important;
         }
-
-        /* Hide desktop elements */
         #leftResizer, #rightResizer, #rightPanel, #desktopControls, .desktop-only {
           display: none !important;
         }
-        /* Show mobile elements */
         #bottomNav, #mobileControls {
             display: flex !important;
         }
@@ -229,7 +229,7 @@
                         <i class="fa fa-search"></i>
                     </button>
                 </div>
-                <div id="memberList" class="flex-1 overflow-y-auto pr-2"></div>
+                <div id="memberList" class="flex-1 overflow-y-auto pr-2" style="-webkit-overflow-scrolling: touch;"></div>
             </div>
         </aside>
 
@@ -260,12 +260,10 @@
             
             <div class="relative flex-1 bg-gray-50 dark:bg-gray-900 md:rounded-lg border-t md:border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div class="absolute inset-0 cursor-grab" id="familyTreeContainer">
-                    <svg id="familyTree" width="10000" height="6000">
-                        <g id="viewport">
-                            <g id="connections"></g>
-                            <g id="members"></g>
-                        </g>
-                    </svg>
+                    <div id="panzoomContainer">
+                         <svg id="connectionsSvg" class="absolute top-0 left-0" width="10000" height="6000"></svg>
+                         <div id="membersContainer"></div>
+                    </div>
                 </div>
                 <div id="mobileControls" class="absolute bottom-6 right-5 z-20 flex-col gap-3 hidden">
                     <button class="btn-primary w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-lg" title="定位始祖" id="mobileLocateRootBtn"><i class="fa fa-map-marker"></i></button>
@@ -384,10 +382,9 @@
     document.addEventListener('DOMContentLoaded', function() {
         
         // --- DOM Elements ---
-        const svg = document.getElementById('familyTree');
-        const viewport = document.getElementById('viewport');
-        const membersGroup = document.getElementById('members');
-        const connectionsGroup = document.getElementById('connections');
+        const panzoomContainer = document.getElementById('panzoomContainer');
+        const membersContainer = document.getElementById('membersContainer');
+        const connectionsSvg = document.getElementById('connectionsSvg');
         const container = document.getElementById('familyTreeContainer');
         const memberDetailsPanel = document.getElementById('memberDetails');
         const mobileMemberDetailsPanel = document.getElementById('mobileMemberDetails');
@@ -444,7 +441,7 @@
                 : dataMap.get(currentFocusRootId);
 
             if (root) {
-                positionNode(root.id, svg.width.baseVal.value / 2, 50, subtreeWidths);
+                positionNode(root.id, connectionsSvg.width.baseVal.value / 2, 50, subtreeWidths);
             }
         }
 
@@ -468,85 +465,74 @@
             const genderBorder = person.gender === 'Male' ? 'border-blue-400' : 'border-pink-400';
             const avatarSize = isSpouse ? 'w-10 h-10' : 'w-12 h-12';
             return `
-                <div class="member-card h-full dark:bg-gray-700/80 border-t-4 ${genderBorder}" data-id="${person.id}" xmlns="http://www.w3.org/1999/xhtml">
-                    <div class="p-2 flex flex-col items-center justify-center">
-                        <img src="${getAvatar(person)}" alt="${person.name}" class="${avatarSize} rounded-full mb-1 border-2 ${genderBorder}">
-                        <h3 class="font-semibold text-center text-base dark:text-gray-100">${person.name}</h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 text-center">第 ${person.gen} 代</p>
-                        ${person.birth ? `<p class="text-xs text-gray-500 dark:text-gray-400 text-center">${person.birth.split('年')[0]}年</p>` : ''}
-                    </div>
+                <div class="p-2 flex flex-col items-center justify-center h-full">
+                    <img src="${getAvatar(person)}" alt="${person.name}" class="${avatarSize} rounded-full mb-1 border-2 ${genderBorder}">
+                    <h3 class="font-semibold text-center text-base dark:text-gray-100">${person.name}</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 text-center">第 ${person.gen} 代</p>
+                    ${person.birth ? `<p class="text-xs text-gray-500 dark:text-gray-400 text-center">${person.birth.split('年')[0]}年</p>` : ''}
                 </div>`;
         }
 
         function renderTree() {
             calculateLayout();
-            membersGroup.innerHTML = '';
-            connectionsGroup.innerHTML = '';
-            activeSpouseUnit = null; 
+            membersContainer.innerHTML = '';
+            connectionsSvg.innerHTML = '';
+            activeSpouseUnit = null;
 
             activeData.forEach(person => {
                 const pos = positions.get(person.id);
                 if (!pos) return;
-
-                const memberUnit = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                memberUnit.setAttribute('class', 'member-unit');
-                memberUnit.setAttribute('transform', `translate(${pos.x}, ${pos.y})`);
+                
+                const memberUnit = document.createElement('div');
+                memberUnit.className = 'member-unit';
                 memberUnit.dataset.id = person.id;
+                memberUnit.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
 
-                const primaryObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-                primaryObject.setAttribute('width', NODE_WIDTH);
-                primaryObject.setAttribute('height', NODE_HEIGHT);
-                primaryObject.innerHTML = createCardHTML(person, false);
-                memberUnit.appendChild(primaryObject);
-
+                const card = document.createElement('div');
+                card.className = `member-card dark:bg-gray-700/80 border-t-4 ${person.gender === 'Male' ? 'border-blue-400' : 'border-pink-400'}`;
+                card.style.width = `${NODE_WIDTH}px`;
+                card.style.height = `${NODE_HEIGHT}px`;
+                card.innerHTML = createCardHTML(person);
+                memberUnit.appendChild(card);
+                
                 const personData = dataMap.get(person.id);
                 if (personData.spouses.length > 0) {
-                    const children = familyData.filter(c => c.father === person.id);
-                    const motherId = children.length > 0 ? children[0].mother : null;
-                    const sortedSpouses = [...personData.spouses].sort((a, b) => (a === motherId) ? -1 : (b === motherId) ? 1 : 0).map(id => dataMap.get(id));
-                    
                     let spouseOffset = NODE_WIDTH + SPOUSE_GAP;
-                    sortedSpouses.forEach(spouse => {
+                    personData.spouses.forEach(spouseId => {
+                        const spouse = dataMap.get(spouseId);
                         if (!spouse) return;
-                        
-                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                        line.setAttribute('class', 'spouse-line');
-                        line.setAttribute('x1', NODE_WIDTH / 2); line.setAttribute('y1', NODE_HEIGHT / 2);
-                        line.setAttribute('x2', spouseOffset + NODE_WIDTH / 2); line.setAttribute('y2', NODE_HEIGHT / 2);
-                        memberUnit.appendChild(line);
 
-                        const spouseContainer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                        spouseContainer.setAttribute('class', 'spouse-container');
-                        spouseContainer.setAttribute('transform', `translate(${spouseOffset}, 0)`);
+                        const spouseLine = document.createElement('div');
+                        spouseLine.className = 'spouse-line';
+                        spouseLine.style.left = `${NODE_WIDTH}px`;
+                        spouseLine.style.top = `${NODE_HEIGHT / 2}px`;
+                        memberUnit.appendChild(spouseLine);
 
-                        const spouseAnimator = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                        spouseAnimator.setAttribute('class', 'spouse-animator');
+                        const spouseUnit = document.createElement('div');
+                        spouseUnit.className = 'spouse-unit';
+                        spouseUnit.style.left = `${spouseOffset}px`;
+
+                        const spouseCard = document.createElement('div');
+                        spouseCard.className = `member-card dark:bg-gray-700/80 border-t-4 ${spouse.gender === 'Male' ? 'border-blue-400' : 'border-pink-400'}`;
+                        spouseCard.style.width = `${NODE_WIDTH}px`;
+                        spouseCard.style.height = `${NODE_HEIGHT}px`;
+                        spouseCard.innerHTML = createCardHTML(spouse, true);
                         
-                        const spouseObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-                        spouseObject.setAttribute('width', NODE_WIDTH);
-                        spouseObject.setAttribute('height', NODE_HEIGHT);
-                        spouseObject.innerHTML = createCardHTML(spouse, true);
-                        
-                        spouseAnimator.appendChild(spouseObject);
-                        spouseContainer.appendChild(spouseAnimator);
-                        memberUnit.appendChild(spouseContainer);
-                        
+                        spouseUnit.appendChild(spouseCard);
+                        memberUnit.appendChild(spouseUnit);
                         spouseOffset += NODE_WIDTH + SPOUSE_GAP;
                     });
                 }
                 
-                membersGroup.appendChild(memberUnit);
+                membersContainer.appendChild(memberUnit);
 
-                const fatherId = person.father;
-                if (fatherId && activeData.some(p => p.id === fatherId)) {
-                    const fatherPos = positions.get(fatherId);
-                    if (fatherPos) {
+                if (person.father) {
+                    const fatherPos = positions.get(person.father);
+                    if (fatherPos && activeData.some(p => p.id === person.father)) {
                         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                        path.dataset.parentId = fatherId;
-                        path.dataset.childId = person.id;
                         path.setAttribute('d', getPathD(fatherPos, pos));
                         path.setAttribute('class', 'tree-line');
-                        connectionsGroup.appendChild(path);
+                        connectionsSvg.appendChild(path);
                     }
                 }
             });
@@ -641,29 +627,13 @@
         }
         
         function highlightPerson(personId) {
-            document.querySelectorAll('.viewfinder-path').forEach(p => p.remove());
-            const card = document.querySelector(`.member-card[data-id="${personId}"]`);
-            const memberUnit = card ? card.closest('.member-unit') : null;
-
+            document.querySelectorAll('.member-card.highlight-card').forEach(c => c.classList.remove('highlight-card'));
+            const memberUnit = document.querySelector(`.member-unit[data-id='${personId}']`);
             if (memberUnit) {
-                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                const cornerLength = 20;
-                const padding = 6;
-                const w = NODE_WIDTH; 
-                const h = NODE_HEIGHT;
-                const d = [
-                    `M ${-padding + cornerLength},${-padding} L ${-padding},${-padding} L ${-padding},${-padding + cornerLength}`,
-                    `M ${w + padding - cornerLength},${-padding} L ${w + padding},${-padding} L ${w + padding},${-padding + cornerLength}`,
-                    `M ${w + padding},${h + padding - cornerLength} L ${w + padding},${h + padding} L ${w + padding - cornerLength},${h + padding}`,
-                    `M ${-padding + cornerLength},${h + padding} L ${-padding},${h + padding} L ${-padding},${h + padding - cornerLength}`
-                ].join(' ');
-                path.setAttribute('d', d);
-                path.setAttribute('class', 'viewfinder-path');
-                const totalLength = (cornerLength * 2) * 4;
-                path.style.strokeDasharray = totalLength;
-                path.style.strokeDashoffset = totalLength;
-                path.style.animation = 'draw-viewfinder-anim 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards';
-                memberUnit.appendChild(path);
+                const card = memberUnit.querySelector('.member-card');
+                if (card) {
+                    card.classList.add('highlight-card');
+                }
             }
         }
 
@@ -722,7 +692,9 @@
 
 
         function updateTransform() {
-            viewport.setAttribute('transform', `translate(${view.tx}, ${view.ty}) scale(${view.scale})`);
+            if(panzoomContainer) {
+                panzoomContainer.style.transform = `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`;
+            }
         }
 
         function centerOnNode(nodeId, newScale) {
@@ -763,22 +735,22 @@
             animationFrameId = requestAnimationFrame(animate);
         }
         
-        membersGroup.addEventListener('click', function(e) {
+        membersContainer.addEventListener('click', function(e) {
             const card = e.target.closest('.member-card');
             if (card) {
                 e.stopPropagation();
-                const id = parseInt(card.dataset.id);
+                const unit = card.closest('.member-unit');
+                const id = parseInt(unit.dataset.id);
                 
                 if (isTouchDevice) {
-                    const unit = card.closest('.member-unit');
                     if (activeSpouseUnit && activeSpouseUnit !== unit) {
-                        handleHideSpouses(activeSpouseUnit);
+                        activeSpouseUnit.classList.remove('spouses-visible');
                     }
                     if (unit.classList.contains('spouses-visible')) {
-                        handleHideSpouses(unit);
+                        unit.classList.remove('spouses-visible');
                         activeSpouseUnit = null;
                     } else {
-                        handleShowSpouses(unit);
+                        unit.classList.add('spouses-visible');
                         activeSpouseUnit = unit;
                     }
                 }
@@ -797,78 +769,9 @@
         
         function addSpouseHoverListeners() {
             document.querySelectorAll('.member-unit').forEach(unit => {
-                unit.addEventListener('mouseenter', () => {
-                    const hideTimeoutId = unit.dataset.hideTimeout;
-                    if (hideTimeoutId) {
-                        clearTimeout(parseInt(hideTimeoutId));
-                        unit.removeAttribute('data-hide-timeout');
-                    }
-                    handleShowSpouses(unit);
-                });
-                unit.addEventListener('mouseleave', () => {
-                    const timeoutId = setTimeout(() => { handleHideSpouses(unit); }, 200);
-                    unit.dataset.hideTimeout = timeoutId;
-                });
+                unit.addEventListener('mouseenter', () => unit.classList.add('spouses-visible'));
+                unit.addEventListener('mouseleave', () => unit.classList.remove('spouses-visible'));
             });
-        }
-
-        function handleShowSpouses(unit) {
-            if (activeLayoutShift && activeLayoutShift.unit === unit) return;
-            if (activeLayoutShift) handleHideSpouses(activeLayoutShift.unit);
-            
-            const personId = parseInt(unit.dataset.id);
-            const person = dataMap.get(personId);
-            if (!person || person.spouses.length === 0) return;
-
-            const expansionWidth = person.spouses.length * (NODE_WIDTH + SPOUSE_GAP);
-            applyLayoutShift(unit, expansionWidth);
-            unit.classList.add('spouses-visible');
-        }
-
-        function handleHideSpouses(unit) {
-            if (!unit) return;
-            if (activeLayoutShift && activeLayoutShift.unit === unit) {
-                 undoLayoutShift();
-            }
-            unit.classList.remove('spouses-visible');
-        }
-
-        function applyLayoutShift(hoveredUnit, expansionWidth) {
-            const hoveredId = parseInt(hoveredUnit.dataset.id);
-            const hoveredPos = positions.get(hoveredId);
-            if (!hoveredPos) return;
-            activeLayoutShift = { unit: hoveredUnit, shiftedNodes: [], shiftedPaths: [] };
-
-            membersGroup.querySelectorAll('.member-unit').forEach(unit => {
-                const unitId = parseInt(unit.dataset.id);
-                const unitPos = positions.get(unitId);
-                if (unitId !== hoveredId && unitPos && unitPos.x > hoveredPos.x) {
-                    const newX = unitPos.x + expansionWidth;
-                    unit.setAttribute('transform', `translate(${newX}, ${unitPos.y})`);
-                    activeLayoutShift.shiftedNodes.push({ unit, originalPos: unitPos });
-                }
-            });
-            connectionsGroup.querySelectorAll('path').forEach(path => {
-                const parentId = parseInt(path.dataset.parentId);
-                const childId = parseInt(path.dataset.childId);
-                const parentPos = { ...positions.get(parentId) };
-                const childPos = { ...positions.get(childId) };
-                let pathShifted = false;
-                if (parentPos.x > hoveredPos.x) { parentPos.x += expansionWidth; pathShifted = true; }
-                if (childPos.x > hoveredPos.x) { childPos.x += expansionWidth; pathShifted = true; }
-                if (pathShifted) {
-                    const originalD = getPathD(positions.get(parentId), positions.get(childId));
-                    path.setAttribute('d', getPathD(parentPos, childPos));
-                    activeLayoutShift.shiftedPaths.push({ path, originalD });
-                }
-            });
-        }
-
-        function undoLayoutShift() {
-            if (!activeLayoutShift) return;
-            activeLayoutShift.shiftedNodes.forEach(item => item.unit.setAttribute('transform', `translate(${item.originalPos.x}, ${item.originalPos.y})`));
-            activeLayoutShift.shiftedPaths.forEach(item => item.path.setAttribute('d', item.originalD));
-            activeLayoutShift = null;
         }
         
         function buildAndAttachMemberList() {
@@ -1082,7 +985,6 @@
             }
         });
 
-        // --- Mobile View Toggling ---
         if (document.getElementById('bottomNav')) {
             const showTreeBtn = document.getElementById('showTreeBtn');
             const showListBtn = document.getElementById('showListBtn');
@@ -1116,12 +1018,12 @@
                 const initialScale = isTouchDevice ? 0.45 : 0.7;
                 if(pos) {
                     view.tx = (container.clientWidth / 2) - ((pos.x + NODE_WIDTH / 2) * initialScale);
-                    view.ty = 80; // Use a fixed top offset for mobile robustness
+                    view.ty = isTouchDevice ? 40 : 80; // Adjusted for mobile
                     view.scale = initialScale;
                     updateTransform();
                 }
             }
-        }, 100);
+        }, 150); // Increased delay slightly for stability
         
         const leftResizer = document.getElementById('leftResizer');
         const rightResizer = document.getElementById('rightResizer');
