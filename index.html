@@ -27,6 +27,14 @@
     </script>
     
     <style type="text/tailwindcss">
+        @layer base {
+            /* NEW: Add padding to body on mobile to avoid overlap with new nav bar */
+            @media (max-width: 767px) {
+                body {
+                    padding-bottom: 70px;
+                }
+            }
+        }
         @layer utilities {
             .content-auto {
                 content-visibility: auto;
@@ -111,7 +119,7 @@
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans min-h-screen flex flex-col">
-    <header class="bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-700/50 sticky top-0 z-50">
+    <header class="bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-700/50 sticky top-0 z-40">
         <div class="container mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <i class="fa fa-sitemap text-secondary text-2xl"></i>
@@ -135,8 +143,8 @@
         </div>
     </header>
 
-    <main class="flex-1 px-4 py-6 block md:flex gap-2">
-        <aside id="leftPanel" class="w-full md:w-64 lg:w-72 shrink-0 md:sticky md:top-24 mb-4 md:mb-0" style="min-width: 200px;">
+    <main class="flex-1 px-4 py-6 md:flex gap-2">
+        <aside id="leftPanel" class="w-full md:w-64 lg:w-72 shrink-0 md:sticky md:top-24" style="min-width: 200px; height: fit-content;">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 h-full flex flex-col">
                 <div class="mb-6 shrink-0">
                     <h2 class="text-lg font-bold text-primary dark:text-gray-100 mb-3 flex items-center"><i class="fa fa-home text-secondary mr-2"></i>家族信息</h2>
@@ -162,7 +170,7 @@
                 </div>
                 <div class="flex-1 flex flex-col min-h-0">
                      <h2 class="text-lg font-bold text-primary dark:text-gray-100 mb-3 flex items-center shrink-0"><i class="fa fa-users text-secondary mr-2"></i>家谱人员</h2>
-                     <div id="memberList" class="flex-1 overflow-y-auto pr-2">
+                     <div id="memberList" class="flex-1 overflow-y-auto pr-2" style="max-height: 50vh;">
                         </div>
                 </div>
             </div>
@@ -172,7 +180,7 @@
             <div class="w-1 h-16 bg-gray-200 dark:bg-gray-600 rounded-full group-hover:bg-secondary transition-colors duration-200"></div>
         </div>
         
-        <section id="centerPanel" class="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5" style="min-width: 300px;">
+        <section id="centerPanel" class="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 mt-4 md:mt-0" style="min-width: 300px;">
             <div class="flex flex-wrap items-center justify-between mb-6 gap-3">
                 <div>
                     <h2 class="text-xl font-bold text-primary dark:text-gray-100">家谱关系图</h2>
@@ -235,6 +243,17 @@
             </div>
             <div class="p-5" id="mobileMemberDetails"></div>
         </div>
+    </div>
+
+    <div id="mobileNav" class="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-[0_-2px_5px_rgba(0,0,0,0.1)] dark:shadow-[0_-2px_5px_rgba(0,0,0,0.3)] p-2 flex justify-around z-50">
+        <button id="showListBtn" class="flex flex-col items-center justify-center text-secondary w-full transition-colors duration-200">
+            <i class="fa fa-users text-xl"></i>
+            <span class="text-xs mt-1">成员列表</span>
+        </button>
+        <button id="showTreeBtn" class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 w-full transition-colors duration-200">
+            <i class="fa fa-sitemap text-xl"></i>
+            <span class="text-xs mt-1">家谱图</span>
+        </button>
     </div>
     
     <script>
@@ -833,6 +852,11 @@
                     document.querySelectorAll('.member-list-name').forEach(el => el.classList.remove('bg-secondary', 'text-white', 'font-semibold'));
                     nameEl.classList.add('bg-secondary', 'text-white', 'font-semibold');
                     focusOnPerson(id, id);
+
+                    // NEW: Auto-switch to tree view on mobile when a name is clicked
+                    if (isTouchDevice) {
+                        document.getElementById('showTreeBtn').click();
+                    }
                 });
             });
         }
@@ -849,6 +873,9 @@
             if (personFound) {
                 focusOnPerson(personFound.id);
                 searchInput.value = '';
+                if (isTouchDevice) {
+                    document.getElementById('showTreeBtn').click();
+                }
             } else {
                 alert(`未找到名为 "${searchTerm}" 的成员。\n请确保输入了完整且正确的姓名。`);
                 searchInput.classList.add('ring-2', 'ring-red-500');
@@ -984,24 +1011,70 @@
             }
         });
 
+        function recenterTree() {
+            setTimeout(() => {
+                const rootId = (currentFocusRootId === null) ? activeData.find(p => !p.father)?.id : currentFocusRootId;
+                if(rootId) {
+                    const pos = positions.get(rootId);
+                    const scale = isTouchDevice ? 0.6 : 0.7;
+                    if(pos) {
+                        view.tx = (container.clientWidth / 2) - ((pos.x + NODE_WIDTH / 2) * scale);
+                        view.ty = (container.clientHeight * 0.2) - ((pos.y + NODE_HEIGHT / 2) * scale); // Center vertically a bit higher
+                        view.scale = scale;
+                        updateTransform();
+                    }
+                }
+            }, 50);
+        }
+
+        // --- NEW: Mobile View Switching Logic ---
+        function setupMobileView() {
+            const leftPanel = document.getElementById('leftPanel');
+            const centerPanel = document.getElementById('centerPanel');
+            const showListBtn = document.getElementById('showListBtn');
+            const showTreeBtn = document.getElementById('showTreeBtn');
+            const activeClasses = ['text-secondary', 'dark:text-secondary'];
+            const inactiveClasses = ['text-gray-500', 'dark:text-gray-400'];
+
+            // Set initial mobile view
+            centerPanel.classList.add('hidden');
+            leftPanel.classList.remove('hidden');
+            showListBtn.classList.add(...activeClasses);
+            showListBtn.classList.remove(...inactiveClasses);
+            showTreeBtn.classList.add(...inactiveClasses);
+            showTreeBtn.classList.remove(...activeClasses);
+
+            showListBtn.addEventListener('click', () => {
+                centerPanel.classList.add('hidden');
+                leftPanel.classList.remove('hidden');
+                showListBtn.classList.add(...activeClasses);
+                showListBtn.classList.remove(...inactiveClasses);
+                showTreeBtn.classList.add(...inactiveClasses);
+                showTreeBtn.classList.remove(...activeClasses);
+            });
+
+            showTreeBtn.addEventListener('click', () => {
+                leftPanel.classList.add('hidden');
+                centerPanel.classList.remove('hidden');
+                showTreeBtn.classList.add(...activeClasses);
+                showTreeBtn.classList.remove(...inactiveClasses);
+                showListBtn.classList.add(...inactiveClasses);
+                showListBtn.classList.remove(...activeClasses);
+                recenterTree();
+            });
+        }
+
+
         // --- Initial Call ---
         activeData = renderedFamilyData;
         renderTree();
         buildAndAttachMemberList();
-        // MODIFICATION: Delay initial centering to ensure layout is ready
-        setTimeout(() => {
-            const root = activeData.find(p => !p.father);
-            if(root) {
-                const pos = positions.get(root.id);
-                const scale = 0.7;
-                if(pos) {
-                    view.tx = (container.clientWidth / 2) - ((pos.x + NODE_WIDTH / 2) * scale);
-                    view.ty = (container.clientHeight / 2) - ((pos.y + NODE_HEIGHT / 2) * scale);
-                    view.scale = scale;
-                    updateTransform();
-                }
-            }
-        }, 50);
+
+        if (isTouchDevice && window.innerWidth < 768) {
+            setupMobileView();
+        } else {
+            recenterTree(); // Initial center for desktop
+        }
         
         const leftPanel = document.getElementById('leftPanel');
         const rightPanel = document.getElementById('rightPanel');
@@ -1034,3 +1107,4 @@
     </script>
 </body>
 </html>
+}
