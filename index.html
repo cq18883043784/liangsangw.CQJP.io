@@ -53,6 +53,14 @@
                 from { opacity: 0; transform: translateY(10px); }
                 to { opacity: 1; transform: translateY(0); }
             }
+            /* --- NEW: Mobile Touch Optimizations --- */
+            #familyTreeContainer {
+                touch-action: none;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
         }
         body.resizing, body.resizing * {
             cursor: col-resize !important;
@@ -309,6 +317,8 @@
         const noMemberSelectedPanel = document.getElementById('noMemberSelected');
         const returnToFullMapBtn = document.getElementById('returnToFullMapBtn');
 
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
         const NODE_WIDTH = 160;
         const NODE_HEIGHT = 130;
         const SPOUSE_GAP = 40;
@@ -326,9 +336,9 @@
         let activeLayoutShift = null;
         let animationFrameId = null;
 
-        // --- NEW State Management for Branch Focus ---
         let currentFocusRootId = null;
         let activeData = [];
+        let activeSpouseUnit = null; // For touch device spouse toggling
 
 
         function calculateLayout() {
@@ -394,6 +404,7 @@
             calculateLayout();
             membersGroup.innerHTML = '';
             connectionsGroup.innerHTML = '';
+            activeSpouseUnit = null; 
 
             activeData.forEach(person => {
                 const pos = positions.get(person.id);
@@ -449,7 +460,6 @@
                 membersGroup.appendChild(memberUnit);
 
                 const fatherId = person.father;
-                // Only draw line if father is also in the active dataset
                 if (fatherId && activeData.some(p => p.id === fatherId)) {
                     const fatherPos = positions.get(fatherId);
                     if (fatherPos) {
@@ -462,7 +472,10 @@
                     }
                 }
             });
-            addSpouseHoverListeners();
+
+            if (!isTouchDevice) {
+                addSpouseHoverListeners();
+            }
         }
 
         function getPathD(parentPos, childPos) {
@@ -495,7 +508,6 @@
                     <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">${person.bio || '暂无信息'}</p>
                 </div>`;
             
-            // --- NEW: Add "Focus Branch" button conditionally ---
             if (hasDescendants) {
                 detailsHTML += `
                 <div class="mb-5">
@@ -582,7 +594,6 @@
             const person = dataMap.get(personId);
             const nodeToCenterOn = (person && person.name.startsWith('梁')) ? person.id : person.father || focusId;
             
-            // Check if the node exists in the current view before centering
             if (nodeToCenterOn && positions.has(nodeToCenterOn)) {
                 centerOnNode(nodeToCenterOn);
             }
@@ -590,7 +601,6 @@
             highlightPerson(personId);
         }
         
-        // --- NEW Branch Focus Functions ---
         function getDescendants(rootId) {
             const branchIds = new Set();
             const queue = [rootId];
@@ -680,8 +690,24 @@
             if (card) {
                 e.stopPropagation();
                 const id = parseInt(card.dataset.id);
+                
+                if (isTouchDevice) {
+                    const unit = card.closest('.member-unit');
+                    if (activeSpouseUnit && activeSpouseUnit !== unit) {
+                        handleHideSpouses(activeSpouseUnit);
+                    }
+                    if (unit.classList.contains('spouses-visible')) {
+                        handleHideSpouses(unit);
+                        activeSpouseUnit = null;
+                    } else {
+                        handleShowSpouses(unit);
+                        activeSpouseUnit = unit;
+                    }
+                }
+
                 highlightPerson(id);
                 updateDetailsPanel(id);
+
                 if (window.innerWidth < 1024) {
                     document.getElementById('mobileMemberModal').classList.add('flex');
                     document.getElementById('mobileMemberModal').classList.remove('hidden');
@@ -722,9 +748,11 @@
         }
 
         function handleHideSpouses(unit) {
-            if (!unit || !activeLayoutShift || activeLayoutShift.unit !== unit) return;
+            if (!unit) return;
+            if (activeLayoutShift && activeLayoutShift.unit === unit) {
+                 undoLayoutShift();
+            }
             unit.classList.remove('spouses-visible');
-            undoLayoutShift();
         }
 
         function applyLayoutShift(hoveredUnit, expansionWidth) {
@@ -833,34 +861,93 @@
         searchButton.addEventListener('click', performSearch);
         searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearch(); });
 
-        container.addEventListener('mousedown', e => {
-            if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
-            if (e.target.closest('.member-card')) return;
-            view.isDragging = true;
-            container.style.cursor = 'grabbing';
-        });
-        document.addEventListener('mousemove', e => {
-            if (!view.isDragging) return;
-            view.tx += e.movementX;
-            view.ty += e.movementY;
-            updateTransform();
-        });
-        document.addEventListener('mouseup', () => {
-            view.isDragging = false;
-            container.style.cursor = 'grab';
-        });
-        container.addEventListener('wheel', e => {
-            e.preventDefault();
-            if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
-            const scaleAmount = 1.1;
-            const rect = container.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
-            const worldX = (mouseX - view.tx) / view.scale; const worldY = (mouseY - view.ty) / view.scale;
-            view.scale *= (e.deltaY < 0 ? scaleAmount : 1 / scaleAmount);
-            view.scale = Math.min(Math.max(0.1, view.scale), 2);
-            view.tx = mouseX - worldX * view.scale; view.ty = mouseY - worldY * view.scale;
-            updateTransform();
-        });
+        // --- Pan and Zoom Logic ---
+        if (!isTouchDevice) {
+            container.addEventListener('mousedown', e => {
+                if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
+                if (e.target.closest('.member-card')) return;
+                view.isDragging = true;
+                container.style.cursor = 'grabbing';
+            });
+            document.addEventListener('mousemove', e => {
+                if (!view.isDragging) return;
+                view.tx += e.movementX;
+                view.ty += e.movementY;
+                updateTransform();
+            });
+            document.addEventListener('mouseup', () => {
+                view.isDragging = false;
+                container.style.cursor = 'grab';
+            });
+            container.addEventListener('wheel', e => {
+                e.preventDefault();
+                if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
+                const scaleAmount = 1.1;
+                const rect = container.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
+                const worldX = (mouseX - view.tx) / view.scale; const worldY = (mouseY - view.ty) / view.scale;
+                view.scale *= (e.deltaY < 0 ? scaleAmount : 1 / scaleAmount);
+                view.scale = Math.min(Math.max(0.1, view.scale), 2);
+                view.tx = mouseX - worldX * view.scale; view.ty = mouseY - worldY * view.scale;
+                updateTransform();
+            });
+        } else {
+            // --- Touch Controls for Mobile ---
+            let initialPinchDistance = null;
+            let lastTouch = null;
+
+            container.addEventListener('touchstart', e => {
+                if (e.target.closest('.member-card')) return;
+                if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
+                
+                if (e.touches.length === 2) { // Pinch Zoom
+                    e.preventDefault();
+                    initialPinchDistance = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                } else if (e.touches.length === 1) { // Pan
+                    e.preventDefault();
+                    lastTouch = { x: e.touches[0].pageX, y: e.touches[0].pageY };
+                    view.isDragging = true;
+                }
+            });
+
+            container.addEventListener('touchmove', e => {
+                if (e.target.closest('.member-card')) return;
+
+                if (e.touches.length === 2 && initialPinchDistance) { // Pinch Zoom
+                    e.preventDefault();
+                    const newPinchDistance = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                    const scaleAmount = newPinchDistance / initialPinchDistance;
+
+                    const rect = container.getBoundingClientRect();
+                    const midX = (e.touches[0].pageX + e.touches[1].pageX) / 2 - rect.left;
+                    const midY = (e.touches[0].pageY + e.touches[1].pageY) / 2 - rect.top;
+                    const worldX = (midX - view.tx) / view.scale;
+                    const worldY = (midY - view.ty) / view.scale;
+
+                    const newScale = Math.min(Math.max(0.1, view.scale * scaleAmount), 2);
+                    view.tx = midX - worldX * newScale;
+                    view.ty = midY - worldY * newScale;
+                    view.scale = newScale;
+                    
+                    updateTransform();
+                    initialPinchDistance = newPinchDistance;
+
+                } else if (e.touches.length === 1 && view.isDragging) { // Pan
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    view.tx += touch.pageX - lastTouch.x;
+                    view.ty += touch.pageY - lastTouch.y;
+                    lastTouch = { x: touch.pageX, y: touch.pageY };
+                    updateTransform();
+                }
+            });
+
+            container.addEventListener('touchend', e => {
+                initialPinchDistance = null;
+                lastTouch = null;
+                view.isDragging = false;
+            });
+        }
         
         document.getElementById('zoomInBtn').addEventListener('click', () => { 
             const newScale = Math.min(view.scale * 1.25, 2);
@@ -901,7 +988,7 @@
         });
 
         // --- Initial Call ---
-        activeData = renderedFamilyData; // Set initial active data
+        activeData = renderedFamilyData;
         renderTree();
         buildAndAttachMemberList();
         const root = activeData.find(p => !p.father);
